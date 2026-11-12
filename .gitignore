@@ -13,4 +13,3 @@ build/THIRD_PARTY_LICENSES.txt
 
 # local only
 .claude/
-CORKBOARD_DESKTOP_PROMPT.md

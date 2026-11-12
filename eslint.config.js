@@ -11,11 +11,9 @@ module.exports = [
       'build/',
       'test-results/',
       'tests/.fixtures/',
-      'tests/web-host/',
       'src/renderer/vendor/',
       'src/renderer/fonts/',
-      'src/renderer/build/',
-      'corkboard v*.html'
+      'src/renderer/build/'
     ]
   },
   js.configs.recommended,

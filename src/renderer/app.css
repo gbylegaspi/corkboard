@@ -1,4 +1,4 @@
-/* Corkboard v1.6.2 styles, copied unchanged from "corkboard v1.6.2.html" (lines 8-727). */
+/* Corkboard styles. Rules added in later versions are marked with the version (v1.7, v2.0, …); docs/ARCHITECTURE.md has the plan to split this file by component. */
 :root {
   --frame: #fffdf8;
   --ink: #35312c;

@@ -31,7 +31,7 @@ Corkboard is an [Electron](https://www.electronjs.org/) app: a web page (the boa
 | `scripts/` | Build helpers: `vendor.js`, `build-renderer.js`, `make-icons.js` |
 | `tests/` | Playwright tests that drive the real app (see Testing) |
 | `build/` | Icons and packaging resources for electron-builder |
-| `docs/` | This file, the plan and version notes (`PLAN.md`), features (`FEATURES.md`), code signing (`SIGNING.md`) |
+| `docs/` | This file, the plan and version notes (`PLAN.md`), code signing (`SIGNING.md`) |
 
 ### The board's modules (`src/renderer/js/`)
 

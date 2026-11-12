@@ -78,10 +78,6 @@ Your board is a normal folder on your Mac:
 
 Back up the whole folder to keep everything safe. Removing the app doesn't delete your board. Nothing is sent anywhere. The app only goes online when you choose Check for Updates, and links you add to notes open in your web browser.
 
-## Web version
-
-`corkboard v1.6.3.html` is the same board as a single web page, for Chrome or Edge on a computer. Boards move freely between the app and the web version: open the same folder in either one.
-
 ## Licences
 
 Corkboard uses pdf.js (Apache 2.0), the Inter font (SIL OFL 1.1), heic-convert / heic-decode (ISC), libheif-js (LGPL-3.0), jpeg-js (BSD-3-Clause), pngjs (MIT) and Electron / Chromium. The full texts are in the app under **Help → Third-Party Licences**.

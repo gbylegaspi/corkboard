@@ -11,7 +11,7 @@ test('first launch makes and opens the app\'s own board; no prompts', async () =
   try {
     h.expect(await page.locator('#start').count()).toBe(0);
     h.expect(await ctx.app.evaluate(() => global.__dlgCalls)).toBe(0);
-    await h.expect(page.locator('#title')).toHaveText('Corkboard');
+    await h.expect(page.locator('#title')).toHaveText('Our memories'); // v2.0: the section's name
     h.expect(await page.locator('#sbTree .sbn').allTextContents()).toEqual(['Our memories']);
     // it really is a board folder: board.json, photos/, thumbs/
     await h.addOne(page, 'Sticky note'); await page.keyboard.type('hello'); await page.mouse.click(20, 700);

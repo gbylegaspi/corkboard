@@ -36,17 +36,17 @@ test('to-do list keyboard: Enter, Backspace, arrows, tick, ×', async () => {
     await page.keyboard.type('milk'); await page.keyboard.press('Enter');
     await page.keyboard.type('eggs'); await page.keyboard.press('Enter');
     await page.keyboard.type('bread');
-    const vals = () => el.$$eval('.tdt', a => a.map(t => t.value));
+    const vals = () => el.$$eval('.tdt', a => a.map(t => t.textContent)); // v2.0: items are rich text (contenteditable)
     h.expect(await vals()).toEqual(['milk', 'eggs', 'bread']);
     // Enter on the last item adds an empty one; Backspace on an empty item deletes it and goes up
     await page.keyboard.press('Enter'); h.expect(await vals()).toEqual(['milk', 'eggs', 'bread', '']);
     await page.keyboard.press('Backspace'); h.expect(await vals()).toEqual(['milk', 'eggs', 'bread']);
-    h.expect(await page.evaluate(() => document.activeElement.value)).toBe('bread');
+    h.expect(await page.evaluate(() => document.activeElement.textContent)).toBe('bread');
     // arrows move between items (up from the start of a line, down from its end)
     await page.keyboard.press('Home'); await page.keyboard.press('ArrowUp');
-    h.expect(await page.evaluate(() => document.activeElement.value)).toBe('eggs');
+    h.expect(await page.evaluate(() => document.activeElement.textContent)).toBe('eggs');
     await page.keyboard.press('ArrowDown');
-    h.expect(await page.evaluate(() => document.activeElement.value)).toBe('bread');
+    h.expect(await page.evaluate(() => document.activeElement.textContent)).toBe('bread');
     // tick "milk": strike-through, saved
     await el.$eval('.tdr:nth-child(1) .tdc', c => c.click());
     h.expect(await el.$eval('.tdr:nth-child(1)', r => r.classList.contains('done'))).toBe(true);

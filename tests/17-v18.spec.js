@@ -44,7 +44,8 @@ test('sub-sections: add, nest, fold, move, theme, delete', async () => {
     await h.expect(page.locator('#tplT')).toHaveText('New section inside “Our memories”');
     await page.fill('#tplName', 'Japan'); await page.click('#tplOk'); await page.waitForTimeout(600);
     h.expect(await h.curSection(page)).toBe('Japan');
-    h.expect(await page.textContent('#secPath')).toBe('Our memories  ›  Japan');
+    h.expect(await page.textContent('#title')).toBe('Japan');                 // v2.0: the big title is the section
+    h.expect(await page.textContent('#secPath')).toBe('in Our memories');
     let d = await h.saved(ctx, d => d.sections.length === 3);
     h.expect(sec(d, 'Japan').parent).toBe('s1');
     // ...and one inside that (a note in it, to check deleting later)

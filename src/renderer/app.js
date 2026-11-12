@@ -158,7 +158,7 @@ function draggable(el,p,onTap,hk){
     paint();raf=requestAnimationFrame(tick);
   }
   function startSwing(e){
-    if(!el.querySelector('.pin')||data.dangle===false)return;
+    if(!hasHoldPin(p)||!hasRealPin(p)||data.dangle===false)return; // v2.0: only while it still has a pin
     ph=el.offsetHeight/2;px=ppx=e.clientX;svx=0;
     vel+=(Math.random()<.5?-1:1)*(90+Math.random()*50);el.classList.add('swing');
     if(!raf){lastT=performance.now();raf=requestAnimationFrame(tick)}
@@ -219,6 +219,10 @@ var IC=(function(){function sv(d){return '<svg viewBox="0 0 24 24" aria-hidden="
     fx:sv('<circle cx="12" cy="12" r="7.5"/><path d="M12 4.5a7.5 7.5 0 0 0 0 15z" fill="currentColor"/>'),
     font:sv('<path d="M3 19 8.5 5h1L15 19M5.2 14.5h7.6"/><circle cx="18.6" cy="16.2" r="2.6"/><path d="M21.2 12.6V19"/>'),
     frame:sv('<rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M8 6h8v8H8z"/>'),
+    vplay:sv('<path d="M8 5.5v13l10.5-6.5z"/>'),
+    vpause:sv('<path d="M8 5.5v13M16 5.5v13"/>'),
+    vopt:sv('<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/>'),
+    callook:sv('<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2"/>'),
     tag:sv('<path d="M3.5 12 8 6.5h12.5v11H8z"/><circle cx="9.2" cy="12" r="1.3"/>'),
     shine:sv('<path d="M11 3.5l1.7 4.8 4.8 1.7-4.8 1.7L11 16.5l-1.7-4.8L4.5 10l4.8-1.7z"/><path d="M18.5 14.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>'),
     cycle:sv('<path d="M4 12a8 8 0 0 1 13.7-5.7L20 8.5M20 4v4.5h-4.5"/><path d="M20 12a8 8 0 0 1-13.7 5.7L4 15.5M4 20v-4.5h4.5"/>'),
@@ -458,28 +462,53 @@ function renderVideo(p){
   var el=document.createElement('div');el.className='card film';el.tabIndex=0;place(el,p);
   el.style.setProperty('--far',Math.max(.75,Math.min(2,p.ar||1.78)));
   var url=mediaUrl(p.id);
-  el.innerHTML=FX_BTN+'<button class="cb del" title="Remove" aria-label="Remove">'+IC.x+'</button><button class="cb rz" title="Drag to resize (double-click to reset)" aria-label="Resize">'+IC.rz+'</button><div class="holes"></div><div class="reel"><div class="frame fxm"><video muted loop playsinline preload="metadata" src="'+url+'#t=0.1"></video>'+fxLayers()+'<span class="play">▶</span><span class="dur"></span></div></div><input maxlength="40" placeholder="add a caption"><div class="holes"></div>';
+  el.innerHTML=FX_BTN+'<button class="cb vplay" title="Play" aria-label="Play">'+IC.vplay+'</button><button class="cb vopt" title="Playback and sound" aria-label="Playback and sound">'+IC.vopt+'</button><button class="cb del" title="Remove" aria-label="Remove">'+IC.x+'</button><button class="cb rz" title="Drag to resize (double-click to reset)" aria-label="Resize">'+IC.rz+'</button><div class="holes"></div><div class="reel"><div class="frame fxm"><video muted loop playsinline preload="metadata" src="'+url+'#t=0.1"></video>'+fxLayers()+'<span class="play">▶</span><span class="dur"></span></div></div><input maxlength="40" placeholder="add a caption"><div class="holes"></div>';
   resizable(el,p);cardFx(el,p);
   var v=el.querySelector('video'),inp=el.querySelector('input');inp.value=p.caption||'';
   inp.addEventListener('input',function(){p.caption=inp.value;save()});
   v.addEventListener('loadedmetadata',function(){var t=Math.round(v.duration||0);el.querySelector('.dur').textContent=Math.floor(t/60)+':'+('0'+t%60).slice(-2)});
   v.addEventListener('error',function(){el.querySelector('.frame').classList.add('bad')});
-  el.addEventListener('mouseenter',function(){if(!el.classList.contains('drag'))v.play().then(function(){el.classList.add('playing')}).catch(function(){})});
-  el.addEventListener('mouseleave',function(){v.pause();el.classList.remove('playing')});
+  // v2.0: how it plays (Settings → Videos, or this video's own choice: p.play, p.snd): always, while pointed at, or only
+  // when its play button is pressed; with or without sound
+  var pb=el.querySelector('.vplay');
+  function mode(){return VPLAY.indexOf(p.play)>=0?p.play:vidSet().play}
+  function sound(){return typeof p.snd==='boolean'?p.snd:vidSet().sound}
+  function playing(on){
+    if(on){v.muted=!sound();v.play().then(function(){el.classList.add('playing')}).catch(function(){})}else{v.pause();el.classList.remove('playing')}
+    var t=on?'Pause':'Play';pb.innerHTML=on?IC.vpause:IC.vplay;pb.title=t;pb.setAttribute('aria-label',t);
+  }
+  el._vapply=function(){playing(mode()==='always');el.dataset.vm=mode()};
+  el.addEventListener('mouseenter',function(){if(mode()==='hover'&&!el.classList.contains('drag'))playing(true)});
+  el.addEventListener('mouseleave',function(){if(mode()==='hover')playing(false)});
+  pb.addEventListener('click',function(e){e.stopPropagation();playing(v.paused);sfx.blip()});
+  el.querySelector('.vopt').addEventListener('click',function(e){e.stopPropagation();var b=this;openPop(b,function(box,close){
+    function group(title,items,cur,pick){var h=document.createElement('h4');h.textContent=title;box.appendChild(h);
+      items.forEach(function(it){var q=document.createElement('button');q.type='button';q.className='pi'+(it[0]===cur?' on':'');q.setAttribute('aria-pressed',it[0]===cur?'true':'false');
+        var t=document.createElement('span');t.textContent=it[1];q.appendChild(t);q.addEventListener('click',function(){close();pick(it[0]);save();sfx.blip();el._vapply()});box.appendChild(q)})}
+    group('Plays',[['',  'Same as Settings'],['always','Always'],['hover','When you point at it'],['click','Only when you press play']],VPLAY.indexOf(p.play)>=0?p.play:'',function(id){if(id)p.play=id;else delete p.play});
+    group('Sound',[['','Same as Settings'],['on','On'],['off','Off']],typeof p.snd==='boolean'?(p.snd?'on':'off'):'',function(id){if(id)p.snd=id==='on';else delete p.snd});
+  })});
   el.querySelector('.fx').addEventListener('click',async function(e){e.stopPropagation();v.pause();el.classList.remove('playing');editFx(el,p,[await videoStill(url)],false)});
   armDel(el.querySelector('.del'),'Remove?',function(){
     data.photos=data.photos.filter(function(q){return q.id!==p.id});
     dropFiles(p);save();bye(el,p.id,function(){dropUrls(p)});
   });
-  draggable(el,p,function(){v.pause();el.classList.remove('playing');openLB(url,p.f)});
-  pinUp(el,p);
+  draggable(el,p,function(){playing(false);openLB(url,p.f)});
+  pinUp(el,p);el._vapply();
 }
+// v2.0: Settings → Videos (data.video: {play: 'always' | 'hover' | 'click', sound: true}; the defaults are left out)
+var VPLAY=['always','hover','click'];
+function vidSet(){var o=data.video||{};return{play:VPLAY.indexOf(o.play)>=0?o.play:'hover',sound:o.sound===true}}
+function cleanVideo(){var o=vidSet(),c={};if(o.play!=='hover')c.play=o.play;if(o.sound)c.sound=true;if(Object.keys(c).length)data.video=c;else delete data.video;
+  data.photos.forEach(function(p){if(p.kind!=='video')return;if(VPLAY.indexOf(p.play)<0)delete p.play;if(typeof p.snd!=='boolean')delete p.snd})}
+function videosApply(){document.querySelectorAll('#layer .card.film').forEach(function(e){if(e._vapply)e._vapply()})}
 
 // ---- photobooth strips: four photos stacked in one strip ----
 function renderStrip(p){
+  if(holdPin(p)){save();yarnFor(900)} // v2.0
   var el=document.createElement('div');el.className='card strip';el.tabIndex=0;place(el,p);
   var fr='';for(var i=0;i<4;i++)fr+='<div class="sf fxm"><img alt="" decoding="async">'+fxLayers()+'</div>';
-  el.innerHTML='<div class="pin"></div><div class="ph"><div class="sframes">'+fr+'</div>'+FX_BTN+FONT_BTN+'<button class="cb del" title="Remove" aria-label="Remove">'+IC.x+'</button><button class="cb rz" title="Drag to resize (double-click to reset)" aria-label="Resize">'+IC.rz+'</button></div><input class="cap" maxlength="40" placeholder="add a caption">';
+  el.innerHTML='<div class="pin"></div><div class="ph"><div class="sframes">'+fr+'</div>'+FX_BTN+FONT_BTN+PILE_BTNS+'<button class="cb del" title="Remove" aria-label="Remove">'+IC.x+'</button><button class="cb rz" title="Drag to resize (double-click to reset)" aria-label="Resize">'+IC.rz+'</button></div><input class="cap" maxlength="40" placeholder="add a caption">';
   el.querySelectorAll('.sf img').forEach(function(im,i){bindImg(im,fileKey(p,i),p.files[i],4/3)});
   cardFx(el,p);resizable(el,p);
   var inp=el.querySelector('input');inp.value=p.caption||'';
@@ -487,17 +516,18 @@ function renderStrip(p){
   el.querySelector('.fx').addEventListener('click',async function(e){e.stopPropagation();editFx(el,p,[0,1,2,3].map(function(i){return smallUrl(fileKey(p,i),p.files[i])}),true)});
   applyCardFont(el,p);el.querySelector('.font').addEventListener('click',function(e){e.stopPropagation();fontMenu(this,el,p,capFontFF())});
   armDel(el.querySelector('.del'),'Remove?',function(){
-    data.photos=data.photos.filter(function(q){return q.id!==p.id});
-    dropFiles(p);save();bye(el,p.id,function(){dropUrls(p)});
+    var pid=p.pile;data.photos=data.photos.filter(function(q){return q.id!==p.id});
+    dropFiles(p);save();bye(el,p.id,function(){dropUrls(p)});pileFix(pid);
   });
-  draggable(el,p);pinUp(el,p);
+  draggable(el,p,null,stackCard(el,p));pinUp(el,p);idxState(el,p);
 }
 
 // ---- photos ----
 function renderPhoto(p){if(p.kind==='doc')return renderDoc(p);if(p.kind==='video')return renderVideo(p);if(p.kind==='strip')return renderStrip(p);if(p.kind==='sticker')return renderSticker(p);
+  if(holdPin(p)){save();yarnFor(900)} // v2.0
   var el=document.createElement('div');el.className='card';el.tabIndex=0;place(el,p);
   var url=mediaUrl(p.id);
-  el.innerHTML='<div class="pin"></div><div class="ph fxm"><img alt="" decoding="async">'+fxLayers()+'<button class="cb ratio" title="Switch between square crop and original ratio" aria-label="Switch between square crop and original ratio">'+IC.crop+'</button><button class="cb frm" title="Frame" aria-label="Frame">'+IC.frame+'</button>'+FX_BTN+FONT_BTN+'<button class="cb del" title="Remove" aria-label="Remove">'+IC.x+'</button><button class="cb rz" title="Drag to resize (double-click to reset)" aria-label="Resize">'+IC.rz+'</button></div><input class="cap" maxlength="40" placeholder="add a caption">';
+  el.innerHTML='<div class="pin"></div><div class="ph fxm"><img alt="" decoding="async">'+fxLayers()+'<button class="cb ratio" title="Switch between square crop and original ratio" aria-label="Switch between square crop and original ratio">'+IC.crop+'</button><button class="cb frm" title="Frame" aria-label="Frame">'+IC.frame+'</button>'+FX_BTN+FONT_BTN+PILE_BTNS+'<button class="cb del" title="Remove" aria-label="Remove">'+IC.x+'</button><button class="cb rz" title="Drag to resize (double-click to reset)" aria-label="Resize">'+IC.rz+'</button></div><input class="cap" maxlength="40" placeholder="add a caption">';
   var inp=el.querySelector('input');inp.value=p.caption||'';
   var im=el.querySelector('img');bindImg(im,p.id,p.file,p.ar);applyMode(el,im,p);resizable(el,p);cardFx(el,p);applyFrame(el,p);applyCardFont(el,p);
   // frame button cycles: polaroid -> no frame with a pin -> no frame with tape -> polaroid
@@ -514,10 +544,10 @@ function renderPhoto(p){if(p.kind==='doc')return renderDoc(p);if(p.kind==='video
   el.querySelector('.fx').addEventListener('click',async function(e){e.stopPropagation();editFx(el,p,[smallUrl(p.id,p.file)],false)});
   inp.addEventListener('input',function(){p.caption=inp.value;save()});
   armDel(el.querySelector('.del'),'Remove?',function(){
-    data.photos=data.photos.filter(function(q){return q.id!==p.id});
-    dropFiles(p);save();bye(el,p.id,function(){dropUrls(p)});
+    var pid=p.pile;data.photos=data.photos.filter(function(q){return q.id!==p.id});
+    dropFiles(p);save();bye(el,p.id,function(){dropUrls(p)});pileFix(pid);
   });
-  draggable(el,p);pinUp(el,p);
+  draggable(el,p,null,stackCard(el,p));pinUp(el,p);idxState(el,p);
 }
 
 // ---- v1.1.6: fonts for captions and labels (system fonts that ship with Windows and macOS; each style lists both) ----
@@ -1009,17 +1039,56 @@ function pad2(n){return(n<10?'0':'')+n}
 function ymNow(){var d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)}
 function weekStart(){try{var L=new Intl.Locale(navigator.language||'en'),w=L.getWeekInfo?L.getWeekInfo():L.weekInfo;if(w&&w.firstDay)return w.firstDay%7}catch(e){}return 1}
 function renderCal(c){
+  if(holdPin(c)){save();yarnFor(900)} // v2.0
   var el=document.createElement('div');el.className='card cal';el.tabIndex=0;place(el,c);
-  el.innerHTML='<div class="pin"></div><div class="calh"><button class="calnav prv" title="Previous month" aria-label="Previous month">‹</button><div class="calm" aria-live="polite"></div><button class="calnav nxt" title="Next month" aria-label="Next month">›</button></div>'+
+  el.innerHTML='<div class="pin"></div><div class="calh"><button class="calnav prv">‹</button><div class="calm" aria-live="polite"></div><button class="calnav nxt">›</button></div>'+
     '<div class="calw" aria-hidden="true"></div><div class="calg"></div><ul class="call"></ul>'+
-    '<button class="cb dot" title="Change colour" aria-label="Change colour"></button><button class="cb del" title="Remove" aria-label="Remove">'+IC.x+'</button>'+RZ_BTN+RZE;
+    '<button class="cb dot" title="Change colour" aria-label="Change colour"></button><button class="cb clook" title="Calendar look" aria-label="Calendar look">'+IC.callook+'</button><button class="cb del" title="Remove" aria-label="Remove">'+IC.x+'</button>'+RZ_BTN;
   var mEl=el.querySelector('.calm'),gEl=el.querySelector('.calg'),lEl=el.querySelector('.call'),ws=weekStart();
   function colour(){el.style.setProperty('--cc',c.c);el.style.setProperty('--pal',c.c)}
   var wd=el.querySelector('.calw');for(var i=0;i<7;i++){var d=new Date(2024,0,7+((ws+i)%7)),sp=document.createElement('span');sp.textContent=d.toLocaleDateString(undefined,{weekday:'narrow'});wd.appendChild(sp)}
+  // v2.0: looks (c.look): month (default), wide (landscape month), mini (small month, numbers only), week (7 days with
+  // what's on), day (tear-off: one big date). Week and day pages remember where they are (c.dy, YYYY-MM-DD).
+  function look(){return CAL_LOOKS.some(function(x){return x.id===c.look})?c.look:'month'}
+  function dayOf(){var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(c.dy||'');return m?new Date(+m[1],+m[2]-1,+m[3]):new Date()}
+  function keyOf(d){return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())}
+  function todayKey(){return keyOf(new Date())}
+  function navLabels(){var L=look(),u=L==='week'?'week':L==='day'?'day':'month';
+    [['prv','Previous '+u],['nxt','Next '+u]].forEach(function(x){var b=el.querySelector('.calnav.'+x[0]);b.title=x[1];b.setAttribute('aria-label',x[1])})}
+  function lookClass(){var L=look();CAL_LOOKS.forEach(function(x){el.classList.toggle('cl-'+x.id,x.id===L)});navLabels()}
+  function dayBtn(d,cls){
+    var key=keyOf(d),e=c.days[key],b=document.createElement('button');b.type='button';
+    b.className=cls+(key===todayKey()?' today':'')+(e&&e.m?' circ':'')+(e?' has':'');
+    var lab=d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'});
+    b.setAttribute('aria-label',lab+(e&&e.t?': '+e.t:''));if(e&&e.t)b.title=e.t;
+    b.addEventListener('click',function(ev){ev.stopPropagation();dayPop(b,key,lab)});
+    return{b:b,e:e,key:key,lab:lab};
+  }
+  function drawWeek(){
+    var d0=dayOf();d0.setDate(d0.getDate()-((d0.getDay()-ws+7)%7));var d6=new Date(d0);d6.setDate(d0.getDate()+6);
+    mEl.textContent=d0.toLocaleDateString(undefined,{day:'numeric',month:'short'})+' \u2013 '+d6.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
+    gEl.innerHTML='';lEl.innerHTML='';lEl.hidden=true;
+    for(var i=0;i<7;i++){var d=new Date(d0);d.setDate(d0.getDate()+i);var x=dayBtn(d,'calwd');
+      var h=document.createElement('span');h.className='cwh';h.textContent=d.toLocaleDateString(undefined,{weekday:'short'});
+      var n=document.createElement('b');n.textContent=d.getDate();var t=document.createElement('span');t.className='cwt';t.textContent=(x.e&&x.e.e?x.e.e+' ':'')+(x.e&&x.e.t||'');
+      x.b.appendChild(h);x.b.appendChild(n);x.b.appendChild(t);gEl.appendChild(x.b)}
+    fit();
+  }
+  function drawDay(){
+    var d=dayOf();mEl.textContent=d.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+    gEl.innerHTML='';lEl.innerHTML='';lEl.hidden=true;var x=dayBtn(d,'calpage');
+    var wk=document.createElement('span');wk.className='cpw';wk.textContent=d.toLocaleDateString(undefined,{weekday:'long'});
+    var n=document.createElement('b');n.className='cpn';n.textContent=d.getDate();
+    var t=document.createElement('span');t.className='cpt';t.textContent=x.e&&(x.e.t||x.e.e)?((x.e.e?x.e.e+' ':'')+(x.e.t||'')):'tap to write';if(!(x.e&&(x.e.t||x.e.e)))t.classList.add('cpe');
+    x.b.appendChild(wk);x.b.appendChild(n);x.b.appendChild(t);gEl.appendChild(x.b);
+    fit();
+  }
   function draw(){
+    lookClass();if(look()==='week')return drawWeek();if(look()==='day')return drawDay();
+    var mini=look()==='mini';
     var y=+c.ym.slice(0,4),m=+c.ym.slice(5,7)-1,first=new Date(y,m,1),days=new Date(y,m+1,0).getDate(),lead=(first.getDay()-ws+7)%7,now=new Date(),
         today=now.getFullYear()+'-'+pad2(now.getMonth()+1)+'-'+pad2(now.getDate());
-    mEl.textContent=first.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+    mEl.textContent=first.toLocaleDateString(undefined,{month:mini?'short':'long',year:'numeric'});
     gEl.innerHTML='';lEl.innerHTML='';var list=[];
     for(var i=0;i<lead;i++)gEl.appendChild(document.createElement('span'));
     for(var dd=1;dd<=days;dd++){(function(dd){
@@ -1028,14 +1097,14 @@ function renderCal(c){
       var lab=new Date(y,m,dd).toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'});
       b.setAttribute('aria-label',lab+(e&&e.t?': '+e.t:''));if(e&&e.t)b.title=e.t;
       var n=document.createElement('span');n.textContent=dd;b.appendChild(n);
-      if(e&&e.e){var em=document.createElement('span');em.className='ce';em.textContent=e.e;b.appendChild(em)}
-      else if(e&&e.t){var dt=document.createElement('i');dt.className='cdot';b.appendChild(dt)}
+      if(e&&e.e&&!mini){var em=document.createElement('span');em.className='ce';em.textContent=e.e;b.appendChild(em)}
+      else if(e&&(e.t||e.e)){var dt=document.createElement('i');dt.className='cdot';b.appendChild(dt)}
       b.addEventListener('click',function(ev){ev.stopPropagation();dayPop(b,key,lab)});
       gEl.appendChild(b);if(e&&(e.t||e.e))list.push([dd,e]);
     })(dd)}
     list.slice(0,5).forEach(function(x){var li=document.createElement('li');var b=document.createElement('b');b.textContent=x[0];li.appendChild(b);li.appendChild(document.createTextNode(' '+(x[1].e?x[1].e+' ':'')+(x[1].t||'')));lEl.appendChild(li)});
     if(list.length>5){var li=document.createElement('li');li.className='more';li.textContent='+ '+(list.length-5)+' more';lEl.appendChild(li)}
-    lEl.hidden=!list.length;fit();
+    lEl.hidden=!list.length||mini;fit();
   }
   function dayPop(b,key,lab){openPop(b,function(box,close){
     var e=Object.assign({t:'',e:'',m:false},c.days[key]||{});
@@ -1052,20 +1121,31 @@ function renderCal(c){
     sw.addEventListener('change',function(){e.m=sw.checked;upd();if(e.m)sfx.tick();else sfx.blip()});tr.appendChild(tt);tr.appendChild(sw);box.appendChild(tr);
     setTimeout(function(){inp.focus()},0);
   })}
-  function month(dir){var y=+c.ym.slice(0,4),m=+c.ym.slice(5,7)-1+dir,d=new Date(y,m,1);c.ym=d.getFullYear()+'-'+pad2(d.getMonth()+1);sfx.flip();save();draw()}
+  function month(dir){
+    var L=look();if(L==='week'||L==='day'){var d=dayOf();d.setDate(d.getDate()+dir*(L==='week'?7:1));c.dy=keyOf(d);
+      if(L==='day'){el.classList.remove('tear','untear');void el.offsetWidth;el.classList.add(dir>0?'tear':'untear')}sfx.flip();save();draw();return}
+    var y=+c.ym.slice(0,4),m=+c.ym.slice(5,7)-1+dir,d2=new Date(y,m,1);c.ym=d2.getFullYear()+'-'+pad2(d2.getMonth()+1);sfx.flip();save();draw()}
   el.querySelector('.calnav.prv').addEventListener('click',function(e){e.stopPropagation();month(-1)});
   el.querySelector('.calnav.nxt').addEventListener('click',function(e){e.stopPropagation();month(1)});
   // double-click the month name to jump back to this month
   // app fix: pressing the card captures the pointer (to drag it), so the double-click arrives at the card, not the
   // month name; listen on the card and check that the double-click was on the month name
   el.addEventListener('dblclick',function(e){var r=mEl.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;
-    e.stopPropagation();if(c.ym!==ymNow()){c.ym=ymNow();sfx.flip();save();draw()}});
+    e.stopPropagation();if(c.ym!==ymNow()||c.dy){c.ym=ymNow();delete c.dy;sfx.flip();save();draw()}});
+  el.querySelector('.clook').addEventListener('click',function(e){e.stopPropagation();
+    menu(this,'Calendar look',CAL_LOOKS.map(function(x){return{id:x.id,label:x.name}}),look(),function(id){if(id==='month')delete c.look;else c.look=id;sfx.blip();draw();
+      // a wider look shouldn't hang off the edge of the board
+      var W=board.clientWidth;if(el.offsetLeft+el.offsetWidth>W-8){c.x=Math.max(0,W-8-el.offsetWidth)/W;setPos(el,c)}keepIn(el);save();yarnFor(500)})});
   el.querySelector('.dot').addEventListener('click',function(e){e.stopPropagation();sfx.blip();c.c=CAL_COLS[(CAL_COLS.indexOf(c.c)+1)%CAL_COLS.length];colour();save()});
   armDel(el.querySelector('.del'),'Remove?',function(){data.notes=data.notes.filter(function(q){return q.id!==c.id});save();bye(el,c.id)});
-  colour();draw();resizable(el,c);stretchable(el,c,'.calg',.6,2.5);draggable(el,c);pinUp(el,c);
+  colour();draw();resizable(el,c);draggable(el,c);pinUp(el,c); // v2.0: no longer stretched; pick a look instead
   return el;
 }
+var CAL_LOOKS=[{id:'month',name:'Month'},{id:'wide',name:'Wide month'},{id:'mini',name:'Mini month'},{id:'week',name:'Week'},{id:'day',name:'Tear-off day'}];
 function cleanCal(n){
+  if(n.look!=null&&!CAL_LOOKS.some(function(x){return x.id===n.look&&x.id!=='month'}))delete n.look;
+  if(n.dy!=null&&!/^\d{4}-\d{2}-\d{2}$/.test(n.dy))delete n.dy;
+  delete n.hs; // v2.0: calendars aren't stretched any more
   if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(n.ym||''))n.ym=ymNow();if(CAL_COLS.indexOf(n.c)<0)n.c=CAL_COLS[0];
   var d={};if(n.days&&typeof n.days==='object')Object.keys(n.days).forEach(function(k){var e=n.days[k];if(!/^\d{4}-\d{2}-\d{2}$/.test(k)||!e||typeof e!=='object')return;
     var o={t:typeof e.t==='string'?e.t.slice(0,40):'',e:CAL_EMO.indexOf(e.e)>=0?e.e:'',m:!!e.m};if(o.t||o.e||o.m)d[k]=o});n.days=d;delete n.text;
@@ -1074,7 +1154,7 @@ function cleanCal(n){
 function cleanNote(n){
   if(n.kind==='cal')cleanCal(n);
   else if(n.kind==='idx'){rtStore(n,rtOf(n,IDX_MAX));if(IDX_COLS.indexOf(n.c)<0)n.c=IDX_COLS[0]}
-  else if(n.kind==='todo'){n.items=(Array.isArray(n.items)?n.items:[]).filter(function(it){return it&&typeof it==='object'}).slice(0,TODO_MAX).map(function(it){return{t:typeof it.t==='string'?it.t.replace(/\n/g,' ').slice(0,TODO_LEN):'',d:!!it.d}});if(!n.items.length)n.items=[{t:'',d:false}]}
+  else if(n.kind==='todo'){n.items=(Array.isArray(n.items)?n.items:[]).filter(function(it){return it&&typeof it==='object'}).slice(0,TODO_MAX).map(function(it){var o={t:typeof it.t==='string'?it.t.replace(/\n/g,' ').slice(0,TODO_LEN):'',d:!!it.d};if(Array.isArray(it.rt))tdStore(o,rtClean(it.rt,TODO_LEN));return o});if(!n.items.length)n.items=[{t:'',d:false}]}
   else{delete n.kind;rtStore(n,rtOf(n,NOTE_MAX))}
   if(n.sc!=null){var z=+n.sc;if(isFinite(z)&&z!==1)n.sc=Math.max(.5,Math.min(4,z));else delete n.sc}
   // v1.7: own font, length (hs), stack state
@@ -1086,8 +1166,10 @@ function cleanNote(n){
 var IDX_COLS=['#fffefa','#fdf3c7','#fbe1e6','#e2eefc','#e3f3e6','#efe6fb'],IDX_MAX=300;
 // v1.7: stacks of sticky notes, to-do lists and index cards, mixed. pile:'p…' (the group), po (order in it),
 // fan:true (spread out to look at; the group is kept and can be stacked again)
-function stackable(n){return !!n&&(!n.kind||n.kind==='todo'||n.kind==='idx')}
-function pileOf(pid){return data.notes.filter(function(n){return stackable(n)&&n.pile===pid&&n.s===data.cur}).sort(function(a,b){return a.po-b.po})}
+// v2.0: polaroids and photobooth strips stack too (with each other and with notes). Photos are told apart by their file.
+function stackable(n){return !!n&&(n.file||n.files?(!n.kind||n.kind==='photo'||n.kind==='strip'):(!n.kind||n.kind==='todo'||n.kind==='idx'))}
+function stackItems(){return data.notes.concat(data.photos)}
+function pileOf(pid){return stackItems().filter(function(n){return stackable(n)&&n.pile===pid&&n.s===data.cur}).sort(function(a,b){return a.po-b.po})}
 function jit(id,r){var h=0;for(var i=0;i<id.length;i++)h=(h*31+id.charCodeAt(i))|0;return((h%1000)/1000)*r}
 function setPos(el,n){var W=board.clientWidth;el.style.left=clampX(n.x*W)+'px';el.style.top=n.y+'px';el.style.setProperty('--r',n.rot+'deg');el.style.zIndex=n.z}
 function idxState(el,n){
@@ -1158,7 +1240,7 @@ function stackCard(el,n){
     drop:function(){
       if(n.fan)return;
       var r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,best=null;
-      data.notes.forEach(function(q){if(q===n||!stackable(q)||q.fan||q.s!==data.cur)return;var c=cards[q.id];if(!c)return;var b=c.getBoundingClientRect();
+      stackItems().forEach(function(q){if(q===n||!stackable(q)||q.fan||q.s!==data.cur)return;var c=cards[q.id];if(!c)return;var b=c.getBoundingClientRect();
         if(cx>b.left&&cx<b.right&&cy>b.top&&cy<b.bottom&&(!best||q.z>best.z))best=q});
       if(!best)return;
       if(!best.pile){best.pile='p'+uid();best.po=0}
@@ -1219,14 +1301,19 @@ function renderNote(n){
   noteCommon(el,n);
 }
 var TODO_MAX=60,TODO_LEN=300,NOTE_MAX=1000; // v1.7: longer notes and to-do lists (were 30 items × 120, notes 160)
+// v2.0: to-do items are rich text too (bold / italics), one line each: {t, d, rt?} like a note's text/rt
+function tdRt(it){return Array.isArray(it.rt)?rtClean(it.rt,TODO_LEN):rtClean([{t:it.t||''}],TODO_LEN)}
+function tdStore(it,segs){segs=segs.map(function(q){var p={t:q.t.replace(/\n/g,' ')};if(q.u)p.u=q.u;if(q.b)p.b=true;if(q.i)p.i=true;return p});it.t=rtPlain(segs);
+  if(segs.some(function(q){return q.u||q.b||q.i}))it.rt=segs;else delete it.rt}
+// where the caret is in a contenteditable, as text offsets ({a: start, b: end}), or null when it's not in there
+function edSel(ed){var g=getSelection();if(!g.rangeCount)return null;var r=g.getRangeAt(0);if(!ed.contains(r.startContainer)||!ed.contains(r.endContainer))return null;
+  var q=document.createRange();q.selectNodeContents(ed);q.setEnd(r.startContainer,r.startOffset);var a=q.toString().length;q.setEnd(r.endContainer,r.endOffset);return{a:a,b:q.toString().length}}
+function edCaret(ed,atStart){var r=document.createRange();r.selectNodeContents(ed);r.collapse(!!atStart);var g=getSelection();g.removeAllRanges();g.addRange(r)}
 function renderTodo(n){
   var el=document.createElement('div');el.className='card note todo';place(el,n);el.style.setProperty('--nc',n.c);
   el.innerHTML='<div class="tape"></div><button class="cb dot" title="Change colour" aria-label="Change colour"></button>'+FONT_BTN+PILE_BTNS+'<button class="cb del" title="Remove" aria-label="Remove">'+IC.x+'</button>'+ROT_BTN+RZ_BTN+RZE+'<div class="tdl" role="list"></div><button class="tdadd" type="button">+ add item</button>';
   var list=el.querySelector('.tdl'),addB=el.querySelector('.tdadd');
-  // item text grows downwards as she types, so long items wrap instead of scrolling sideways
-  function grow(ta){ta.style.height='auto';ta.style.height=ta.scrollHeight+'px'}
-  function growAll(){list.querySelectorAll('.tdt').forEach(grow)}
-  function focusItem(i,atStart){var t=list.querySelectorAll('.tdt')[i];if(!t)return;t.focus({preventScroll:true});var p=atStart?0:t.value.length;t.setSelectionRange(p,p)}
+  function focusItem(i,atStart){var t=list.querySelectorAll('.tdt')[i];if(!t)return;t.focus({preventScroll:true});edCaret(t,atStart)}
   function add(at){if(n.items.length>=TODO_MAX){sfx.warn();toast('A list can hold '+TODO_MAX+' items');return false}n.items.splice(at,0,{t:'',d:false});build();save();fit();return true}
   function remove(it){var i=n.items.indexOf(it);if(i<0)return 0;if(n.items.length===1){it.t='';it.d=false}else n.items.splice(i,1);build();save();fit();return i}
   // v1.7: select all. ⌘A selects the item's text; pressing it again (or on an empty item) selects the whole list. Then ⌘C copies
@@ -1244,7 +1331,7 @@ function renderTodo(n){
   list.addEventListener('keydown',function(e){
     if((e.metaKey||e.ctrlKey)&&!e.shiftKey&&!e.altKey&&e.key.toLowerCase()==='a'){var ta=e.target;if(!ta.classList||!ta.classList.contains('tdt'))return;
       if(allSel){e.preventDefault();return}
-      if(!ta.value||(ta.selectionStart===0&&ta.selectionEnd===ta.value.length)){e.preventDefault();e.stopPropagation();selAll(true)}return}
+      var q=edSel(ta),L=ta.textContent.length;if(!L||(q&&q.a===0&&q.b===L)){e.preventDefault();e.stopPropagation();selAll(true)}return}
     if(!allSel)return;
     if(e.key==='Backspace'||e.key==='Delete'){e.preventDefault();e.stopPropagation();sfx.trash();replaceAll([''])}
     else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();selAll(false)}
@@ -1256,26 +1343,25 @@ function renderTodo(n){
     n.items.forEach(function(it){
       var r=document.createElement('div');r.className='tdr'+(it.d?' done':'');r.setAttribute('role','listitem');
       var cb=document.createElement('input');cb.type='checkbox';cb.className='tdc';cb.checked=!!it.d;cb.setAttribute('aria-label','Done');
-      var ta=document.createElement('textarea');ta.className='tdt';ta.rows=1;ta.maxLength=TODO_LEN;ta.placeholder='to do…';ta.value=it.t;ta.spellcheck=false;
+      var ta=document.createElement('div');ta.className='tdt';ta.contentEditable='true';ta.spellcheck=spellOn();ta.setAttribute('role','textbox');ta.setAttribute('aria-label','To-do item');ta.dataset.ph='to do\u2026';
+      rtRender(ta,tdRt(it));
+      rtEditor(ta,TODO_LEN,false,function(){tdStore(it,rtRead(ta));save();fit()},true);
+      ta.addEventListener('blur',function(){if(!popEl)rtRender(ta,tdRt(it))});
       var x=document.createElement('button');x.type='button';x.className='tdx';x.textContent='×';x.title='Remove item';x.setAttribute('aria-label','Remove item');
       cb.addEventListener('change',function(){it.d=cb.checked;r.classList.toggle('done',it.d);if(it.d)sfx.tick();else sfx.blip();save()});
-      ta.addEventListener('input',function(){if(/\n/.test(ta.value))ta.value=ta.value.replace(/\n/g,' ');it.t=ta.value;grow(ta);save();fit()});
       ta.addEventListener('keydown',function(e){
-        var i=n.items.indexOf(it);
+        var i=n.items.indexOf(it),q=edSel(ta)||{a:0,b:0},L=ta.textContent.length;
         if(e.key==='Enter'){e.preventDefault();if(add(i+1))focusItem(i+1)}
-        else if(e.key==='Backspace'&&ta.value===''&&n.items.length>1){e.preventDefault();remove(it);focusItem(Math.max(0,i-1))}
-        else if(e.key==='ArrowUp'&&ta.selectionStart===0&&i>0){e.preventDefault();focusItem(i-1)}
-        else if(e.key==='ArrowDown'&&ta.selectionEnd===ta.value.length&&i<n.items.length-1){e.preventDefault();focusItem(i+1,true)}
+        else if(e.key==='Backspace'&&!L&&n.items.length>1){e.preventDefault();remove(it);focusItem(Math.max(0,i-1))}
+        else if(e.key==='ArrowUp'&&q.a===0&&q.b===0&&i>0){e.preventDefault();focusItem(i-1)}
+        else if(e.key==='ArrowDown'&&q.a===L&&q.b===L&&i<n.items.length-1){e.preventDefault();focusItem(i+1,true)}
       });
       x.addEventListener('click',function(e){e.stopPropagation();sfx.blip();var i=remove(it);focusItem(Math.min(i,n.items.length-1))});
       r.appendChild(cb);r.appendChild(ta);r.appendChild(x);list.appendChild(r);
     });
-    if(el.isConnected)growAll();
   }
   addB.addEventListener('click',function(e){e.stopPropagation();if(add(n.items.length)){sfx.blip();focusItem(n.items.length-1)}});
-  build();noteCommon(el,n);growAll();
-  // re-wrap the items when the list is resized (or the window changes size)
-  if(window.ResizeObserver){var lw=0;new ResizeObserver(function(){var w=list.clientWidth;if(w!==lw){lw=w;growAll()}}).observe(list)}
+  build();noteCommon(el,n);
   return el;
 }
 function slot(){
@@ -1297,7 +1383,7 @@ function addNote(kind){{
     var NC=noteColours(),n=Object.assign({id:'n'+uid(),s:data.cur,c:NC[Math.floor(Math.random()*NC.length)]},kind==='todo'?{kind:'todo',items:[{t:'',d:false}]}:kind==='cal'?{kind:'cal',c:CAL_COLS[0],ym:ymNow(),days:{}}:{text:''},slot());
     if(kind==='cal')n.rot=Math.round(n.rot*4)/10;
     data.notes.push(n);renderNote(n);sfx.pop();sfx.land(.4);save();fit();
-    var ta=cards[n.id].querySelector('textarea,.nte');if(ta)setTimeout(function(){ta.focus({preventScroll:true})},350);
+    var ta=cards[n.id].querySelector('textarea,.nte,.tdt');if(ta)setTimeout(function(){ta.focus({preventScroll:true})},350);
   }
 }
 
@@ -1371,7 +1457,8 @@ function renderTabs(){
   setTimeout(function(){if(layer){zOrg();fit()}},0);
   var cur=curSection(),path=secPathOf(cur);
   document.getElementById('sbCur').textContent=cur?cur.name:'';
-  document.getElementById('secPath').textContent=path.length>1?path.map(function(s){return s.name}).join('  ›  '):'';
+  if(document.activeElement!==titleEl)titleEl.textContent=cur?cur.name:'';
+  document.getElementById('secPath').textContent=path.length>1?'in '+path.slice(0,-1).map(function(s){return s.name}).join('  ›  '):'';
   sbTree.innerHTML='';var hideKids={};
   secOrder().forEach(function(o){
     var sc=o.sc;if(sc.parent&&hideKids[sc.parent]){hideKids[sc.id]=1;return}
@@ -1504,7 +1591,7 @@ async function addFiles(list,stripOnly){
 }
 
 // ---- settings panel ----
-var VERSION='v1.8.0';
+var VERSION='v2.0.0';
 var gearBtn=document.getElementById('gear'),setEl=document.getElementById('set'),setMain=document.getElementById('setMain'),setStore=document.getElementById('setStore'),
     sndOn=document.getElementById('sndOn'),volEl=document.getElementById('vol'),volN=document.getElementById('volN'),secList=document.getElementById('secList');
 document.getElementById('about').textContent='About · Corkboard '+VERSION;
@@ -1730,7 +1817,7 @@ function renderStyle(){
     row.appendChild(c);box.appendChild(row);
   }
   swatches('Polaroid & strip frame',FRAMES,'frame');
-  swatches('Pin colour',PINS,'pin');
+  swatches('Colour of new photo pins',PINS,'pin');
   var l=document.createElement('div');l.className='stl';l.textContent='Sticky note colours (for new notes and the colour dot)';box.appendChild(l);
   var row=document.createElement('div');row.className='swr';row.setAttribute('role','radiogroup');row.setAttribute('aria-label','Sticky note colours');
   PALETTES.forEach(function(p){var on=data.style.notes===p.id,b=document.createElement('button');b.className='palb'+(on?' on':'');b.setAttribute('role','radio');b.setAttribute('aria-checked',on?'true':'false');
@@ -1768,7 +1855,7 @@ stabs.addEventListener('keydown',function(e){
 showPane('general');
 function openSettings(){
   if(!dir)return;
-  sndOn.checked=sound;dangleOn.checked=data.dangle!==false;volEl.value=Math.round(volume*100);volN.textContent=Math.round(volume*100)+'%';
+  sndOn.checked=sound;dangleOn.checked=data.dangle!==false;hoverOn.checked=data.hover!==false;spellBox.checked=spellOn();vidPlay.value=vidSet().play;vidSnd.checked=vidSet().sound;volEl.value=Math.round(volume*100);volN.textContent=Math.round(volume*100)+'%';
   renderThemes();renderStyle();renderSecList();showView('main');setEl.style.display='flex';sfx.blip();document.getElementById('setX').focus();
 }
 function closeSettings(){if(setEl.style.display!=='flex')return;setEl.style.display='none';gearBtn.focus()}
@@ -1782,6 +1869,19 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&setEl.style
 // sound: on/off + volume (volume scales the master gain)
 var dangleOn=document.getElementById('dangleOn');
 dangleOn.addEventListener('change',function(){data.dangle=dangleOn.checked;save();sfx.blip()});
+// v2.0: hover movement (data.hover === false: cards stay still under the pointer) and spelling (data.spell === false: off)
+var hoverOn=document.getElementById('hoverOn'),spellBox=document.getElementById('spellOn');
+function applyHover(){document.documentElement.classList.toggle('nohov',data.hover===false)}
+function spellOn(){return data.spell!==false}
+var SPELL_SEL='.nte,.ixe,.tdt,.ltx,input.cap,.film input,#title';
+function applySpell(root){var on=spellOn();(root||document).querySelectorAll(SPELL_SEL).forEach(function(e){e.spellcheck=on})}
+var vidPlay=document.getElementById('vidPlay'),vidSnd=document.getElementById('vidSnd');
+function vidChange(){data.video={play:vidPlay.value,sound:vidSnd.checked};cleanVideo();save();sfx.blip();videosApply()}
+vidPlay.addEventListener('change',vidChange);vidSnd.addEventListener('change',vidChange);
+hoverOn.addEventListener('change',function(){if(hoverOn.checked)delete data.hover;else data.hover=false;applyHover();save();sfx.blip()});
+spellBox.addEventListener('change',function(){if(spellBox.checked)delete data.spell;else data.spell=false;applySpell();save();sfx.blip()});
+// new cards get the spelling setting as they arrive
+new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.forEach(function(n){if(n.nodeType===1)applySpell(n)})})}).observe(document.getElementById('layer'),{childList:true,subtree:true});
 sndOn.addEventListener('change',function(){sound=sndOn.checked;data.sound=sound;save();if(sound)sfx.blip()});
 volEl.addEventListener('input',function(){
   if(!sound){sound=true;data.sound=true;sndOn.checked=true}
@@ -1857,11 +1957,15 @@ document.getElementById('stPicker').addEventListener('click',async function(){
   mount(h);
 });
 
-titleEl.addEventListener('input',function(){data.title=titleEl.textContent.trim()||'Corkboard';save()});
-titleEl.addEventListener('blur',function(){data.title=titleEl.textContent.trim()||'Corkboard';if(titleEl.textContent!==data.title)titleEl.textContent=data.title;save()});
-// pasting into the title keeps it plain text on one line, and the title stays a sensible length
-titleEl.addEventListener('paste',function(e){e.preventDefault();var t=(e.clipboardData||window.clipboardData).getData('text')||'';document.execCommand('insertText',false,t.replace(/\s+/g,' ').slice(0,Math.max(0,60-titleEl.textContent.length)))});
-titleEl.addEventListener('beforeinput',function(e){if(e.inputType==='insertText'&&titleEl.textContent.length>=60&&window.getSelection().isCollapsed)e.preventDefault()});
+// v2.0: the big title is the name of the section you're in; typing in it renames the section (data.title is kept, unused)
+var TITLE_MAX=24;
+function titleName(){var t=titleEl.textContent.replace(/\s+/g,' ').trim();return t.slice(0,TITLE_MAX)}
+titleEl.addEventListener('input',function(){var sc=curSection(),t=titleName();if(sc&&t){sc.name=t;save();document.getElementById('sbCur').textContent=t}});
+titleEl.addEventListener('blur',function(){var sc=curSection();if(!sc)return;var t=titleName();if(t)sc.name=t;titleEl.textContent=sc.name;save();renderTabs();if(setEl.style.display==='flex')renderSecList()});
+// pasting into the title keeps it plain text on one line, and the name stays a sensible length
+titleEl.addEventListener('paste',function(e){e.preventDefault();var t=(e.clipboardData||window.clipboardData).getData('text')||'';document.execCommand('insertText',false,t.replace(/\s+/g,' ').slice(0,Math.max(0,TITLE_MAX-titleEl.textContent.length+getSelection().toString().length)))});
+titleEl.addEventListener('beforeinput',function(e){if(e.inputType==='insertText'&&titleEl.textContent.length>=TITLE_MAX&&window.getSelection().isCollapsed)e.preventDefault()});
+titleEl.addEventListener('keydown',function(e){if(e.key==='Escape'){var sc=curSection();if(sc)titleEl.textContent=sc.name;titleEl.blur()}});
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&dir){clearTimeout(st);flush()}});
 titleEl.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();titleEl.blur()}});
 
@@ -1949,7 +2053,7 @@ function instantiate(items,sid){
   var pm={},dy=Math.max(0,zOrg()-165);
   items.map(cleanItem).forEach(function(it){
     if(!it)return;var o=it.o;o.s=sid;o.z=++topZ;o.y+=dy;
-    if(o.pile)o.pile=pm[o.pile]||(pm[o.pile]='p'+uid());
+    if(o.pile)o.pile=pm[o.pile]||(pm[o.pile]='p'+uid());delete o.pn; // (a new card gets its own pin)
     if(it.k==='label'){o.id='l'+uid();data.labels.push(o)}
     else if(it.k==='note'){o.id='n'+uid();if(o.kind==='cal')o.ym=ymNow();data.notes.push(o)}
     else if(it.k==='sticker'){if(!libFiles[o.file])return;o.id='k'+uid();files[o.id]=libFiles[o.file];data.photos.push(o)}
@@ -2035,7 +2139,7 @@ function shelfHot(x,y){shelfEl.classList.toggle('hot',x!=null&&overShelf(x,y))}
 function toShelf(list){
   var b=shBtn.getBoundingClientRect(),tx=b.left+b.width/2,ty=b.top+b.height/2,piles={},n=Date.now();
   list.forEach(function(o,i){
-    if(groupOf(o)==='note'&&o.pile){piles[o.pile]=1;delete o.pile;delete o.po;delete o.fan}
+    if(o.pile){piles[o.pile]=1;delete o.pile;delete o.po;delete o.fan}
     o.s=SHELF;o.sh=n+i;var el=cards[o.id];
     if(el){delete cards[o.id];sel.delete(el);var r=el.getBoundingClientRect();
       el.classList.remove('drag','sel');el.style.transition='transform .38s cubic-bezier(.5,0,.8,.5),opacity .38s';el.style.pointerEvents='none';
@@ -2218,6 +2322,13 @@ function panToSide(dir2){
 edgeL.addEventListener('click',function(){panToSide(-1)});edgeR.addEventListener('click',function(){panToSide(1)});
 edgeL.addEventListener('dblclick',zoomToFit);edgeR.addEventListener('dblclick',zoomToFit);
 
+// v2.0: polaroids, no-frame pinned photos, photobooth strips and calendars no longer have a pin drawn on them. Each gets a
+// real pin instead (the same spot, top middle), made once per card (o.pn), that can be moved, recoloured, removed or tied.
+// fx = where along the card's width (0–1); ox/oy stay for versions before 2.0. Moving the pin replaces fx with ox.
+function hasHoldPin(o){if(!o)return false;if(o.kind==='cal'||o.kind==='strip')return true;return !!(o.file&&(!o.kind||o.kind==='photo')&&!(o.bare&&o.hold==='tape'))}
+function holdPin(o){if(!o||o.pn||!hasHoldPin(o))return false;o.pn=1;data.pins.push({id:'q'+uid(),c:(data.style&&data.style.pin)||'#d6264f',card:o.id,fx:.5,ox:110,oy:0});return true}
+function holdPins(){var n=0;data.photos.concat(data.notes).forEach(function(o){if(holdPin(o))n++});return n}
+function hasRealPin(o){return !!o&&data.pins.some(function(q){return q.card===o.id})}
 // ---- v1.6: pins and yarn. data.pins: {id,c, s,x,y} on the board, or {id,c, card,ox,oy} stuck in a card (moves with it).
 // data.yarns: {id,a,b,c} ties pin a to pin b. Drawn in one overlay above everything except the dialogs. ----
 var YARN_COLS=['#d6264f','#2f6fd6','#2c9a5a','#f2c230','#ff8fb1','#8a4fd6','#e07b2a','#f7f3ea','#2a2622'];
@@ -2229,7 +2340,7 @@ function sx2(lx){var br=yBR||board.getBoundingClientRect(),W=board.clientWidth;r
 function sy2(ly){var br=yBR||board.getBoundingClientRect();return br.top+Z_ORG+(ly-Z_ORG)*ZM}
 function toLogical(cx,cy){var br=board.getBoundingClientRect(),W=board.clientWidth;return{x:W/2+PAN+((cx-br.left)-W/2)/ZM,y:Z_ORG+((cy-br.top)-Z_ORG)/ZM}}
 function pinPos(p){
-  if(p.card){var el=cards[p.card];if(!el||el.classList.contains('bye'))return null;return{x:sx2(el.offsetLeft+p.ox),y:sy2(el.offsetTop+p.oy)}}
+  if(p.card){var el=cards[p.card];if(!el||el.classList.contains('bye'))return null;return{x:sx2(el.offsetLeft+(p.fx!=null?p.fx*el.offsetWidth:p.ox)),y:sy2(el.offsetTop+p.oy)}}
   if(p.s!==data.cur)return null;return{x:sx2(p.x*board.clientWidth),y:sy2(p.y)};
 }
 var SVGNS='http://www.w3.org/2000/svg';
@@ -2271,7 +2382,7 @@ function stackPins(pos,hide){
   for(var pid in g){
     var m=pileOf(pid);if(m.length<2)continue;var top=m[m.length-1],tel=cards[top.id];if(!tel)continue;
     var ps=g[pid],rep=ps.filter(function(p){return p.card===top.id})[0]||ps[0];
-    var rp=rep.card===top.id?pos[rep.id]:{x:sx2(tel.offsetLeft+rep.ox),y:sy2(tel.offsetTop+rep.oy)};
+    var rp=rep.card===top.id?pos[rep.id]:{x:sx2(tel.offsetLeft+(rep.fx!=null?rep.fx*tel.offsetWidth:rep.ox)),y:sy2(tel.offsetTop+rep.oy)};
     ps.forEach(function(p){pos[p.id]=rp;if(p!==rep)hide[p.id]=1});
   }
 }
@@ -2287,10 +2398,25 @@ function yarnClean(){
   if(data.pins.length!==before){var pids={};data.pins.forEach(function(p){pids[p.id]=1});data.yarns=data.yarns.filter(function(y){return pids[y.a]&&pids[y.b]});save()}
   yarnFor(500);
 }
+// v2.0: while a card is hovered, its buttons show through the pins and yarn: those spots are cut out of the yarn layer
+// (a clip-path, so the cut-out parts can't be clicked either and the button underneath gets the click)
+var yCutP=document.querySelector('#ycut path'),yCutEl=null,yCutT=0;
+function yCut(el){
+  yCutEl=el;var W=innerWidth,H=innerHeight,d='M-10 -10H'+(W+10)+'V'+(H+10)+'H-10Z';
+  if(el&&!yMode&&!el.classList.contains('drag'))el.querySelectorAll('.cb,.rze,.tdx,.tdadd,.calnav').forEach(function(b){
+    var r=b.getBoundingClientRect();if(!r.width||getComputedStyle(b).display==='none')return;var x=r.left-4,y=r.top-4,w=r.width+8,h=r.height+8;
+    d+='M'+x+' '+y+'h'+w+'v'+h+'h'+(-w)+'Z'});
+  yCutP.setAttribute('d',d);
+}
+yCut(null);
+layer.addEventListener('pointerover',function(e){var c=e.target.closest&&e.target.closest('.card');if(c===yCutEl)return;yCut(c);clearTimeout(yCutT);if(c)yCutT=setTimeout(function(){if(yCutEl===c)yCut(c)},260)}); // again once the hover lift has settled
+layer.addEventListener('pointerleave',function(){yCut(null)});
+window.addEventListener('pointermove',function(){if(yCutEl&&yCutEl.classList.contains('drag'))yCut(null)},{passive:true}); // the card is being moved: nothing to cut out
+window.addEventListener('resize',function(){yCut(yCutEl)});
 function cardAt(cx,cy){var a=document.elementsFromPoint(cx,cy);for(var i=0;i<a.length;i++){var c=a[i].closest&&a[i].closest('#layer .card');if(c&&c._p&&!c.classList.contains('bye'))return c}return null}
 // where a pin goes: stuck in the card under the point, or on the board itself
 function pinAt(p,cx,cy){
-  var L=toLogical(cx,cy),c=cardAt(cx,cy);delete p.card;delete p.ox;delete p.oy;delete p.s;delete p.x;delete p.y;
+  var L=toLogical(cx,cy),c=cardAt(cx,cy);delete p.card;delete p.ox;delete p.oy;delete p.fx;delete p.s;delete p.x;delete p.y;
   if(c){p.card=c._p.id;p.ox=Math.round(L.x-c.offsetLeft);p.oy=Math.round(L.y-c.offsetTop)}
   else{var W=board.clientWidth;p.s=data.cur;p.x=clampX(L.x,0)/W;p.y=Math.max(Z_ORG-40,Math.round(L.y))}
 }
@@ -2391,7 +2517,7 @@ async function mount(h){
     cleanSecTree(); // v1.8
     data.photos.forEach(function(p){if(!p.s)p.s=data.sections[0].id});
     if(!data.sections.some(function(s){return s.id===data.cur}))data.cur=data.sections[0].id;
-    titleEl.textContent=data.title||'Corkboard';
+    titleEl.textContent='';
     var keep=[];
     for(var p of data.photos){
       if(p.f)p.f=fxClean(p.f);if(!p.f)delete p.f;
@@ -2415,7 +2541,8 @@ async function mount(h){
     // v1.6 pins and yarn
     var hexC=function(c){return YARN_COLS.indexOf(c)>=0?c:YARN_COLS[0]};
     data.pins=(Array.isArray(data.pins)?data.pins:[]).filter(function(p){return p&&typeof p.id==='string'}).map(function(p){var o={id:p.id,c:hexC(p.c)};
-      if(typeof p.card==='string'){o.card=p.card;o.ox=+p.ox||0;o.oy=+p.oy||0}else{var sids=data.sections.map(function(q){return q.id});o.s=sids.indexOf(p.s)>=0?p.s:sids[0];o.x=isFinite(+p.x)?+p.x:.5;o.y=isFinite(+p.y)?+p.y:300}return o});
+      if(typeof p.card==='string'){o.card=p.card;o.ox=+p.ox||0;o.oy=+p.oy||0;if(typeof p.fx==='number'&&p.fx>=0&&p.fx<=1)o.fx=p.fx}else{var sids=data.sections.map(function(q){return q.id});o.s=sids.indexOf(p.s)>=0?p.s:sids[0];o.x=isFinite(+p.x)?+p.x:.5;o.y=isFinite(+p.y)?+p.y:300}return o});
+    if(holdPins())save(); // v2.0: drawn card pins become real pins, once
     var pidOk={};data.pins.forEach(function(p){pidOk[p.id]=1});
     data.yarns=(Array.isArray(data.yarns)?data.yarns:[]).filter(function(y){return y&&pidOk[y.a]&&pidOk[y.b]&&y.a!==y.b}).map(function(y){return{id:typeof y.id==='string'?y.id:'y'+uid(),a:y.a,b:y.b,c:hexC(y.c)}});
     yCol=hexC(data.yarnCol);
@@ -2440,8 +2567,13 @@ async function mount(h){
     }else data.wallpaper=null;
     sound=data.sound!==false;data.sound=sound;
     volume=(typeof data.volume==='number'&&isFinite(data.volume))?Math.max(0,Math.min(1,data.volume)):.8;data.volume=volume;applyVolume();
+    cleanVideo();if(data.hover!==false)delete data.hover;if(data.spell!==false)delete data.spell;applyHover();applySpell(); // v2.0
     data.dangle=data.dangle!==false;delete data.keys;data.style=cleanStyle(data.style);applyStyle();data.custom=cleanCustom(data.custom);data.theme=THEMES.some(function(t){return t.id===data.theme})?data.theme:'classic';data.sections.forEach(function(sc){if(sc.theme&&!THEMES.some(function(t){return t.id===sc.theme}))delete sc.theme});applyTheme(curTheme());
     var zz=+data.zoom;ZM=1;setZoom(isFinite(zz)?zz:1);if(ZM===1)delete data.zoom;
+    // v2.0: the same layout on any screen: the board's layout width (bw) is set once, and the window scales to fit it
+    if(!(typeof data.bw==='number'&&data.bw>=600&&data.bw<=4000))delete data.bw;
+    if(window.corkNative&&window.corkNative.boardWidth){try{var bw=await window.corkNative.boardWidth(data.bw||null);if(bw&&data.bw!==bw){data.bw=bw;save()}}catch(e){}
+      await new Promise(function(r){requestAnimationFrame(function(){requestAnimationFrame(r)})})} // the page has its new size before cards are placed
     gearBtn.style.display='inline-flex';document.getElementById('lfab').style.display='';sbBtn.style.display='';setSidebar(false);shelfEl.style.display='';renderShelf();ySvg.style.display='';yarnClean();fab.style.display='';startEl.remove();closeSettings();renderSection();rememberHandle(h);
   }catch(e){toast('Couldn\u2019t open that folder')}
 }

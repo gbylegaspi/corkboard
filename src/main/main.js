@@ -114,6 +114,19 @@ handle('cork:sameEntry', (e, r1, s1, r2, s2) => storage.sameEntry(r1, s1, r2, s2
 handle('cork:rootPath', (e, root) => storage.rootPath(root));
 handle('cork:reveal', async (e, root) => { const err = await shell.openPath(storage.rootPath(root)); if (err) throw new Error(err); });
 handle('cork:opened', (e, root) => { current = root; refreshMenu(); });
+// v2.0: a board keeps the same layout on any screen. It's laid out at a fixed width (board.json "bw", set from the window's
+// width the first time 2.0 opens it), and the page is scaled to fit the window: the same layout, just bigger or smaller.
+const BW_MIN = 600, BW_MAX = 4000, FIT_MIN = .5, FIT_MAX = 2.5;
+let boardW = 0;
+function fitZoom() {
+  if (!win || win.isDestroyed()) return;
+  const w = win.getContentBounds().width, f = boardW ? Math.min(FIT_MAX, Math.max(FIT_MIN, w / boardW)) : 1;
+  if (Math.abs(win.webContents.getZoomFactor() - f) > 1e-4) win.webContents.setZoomFactor(f);
+}
+handle('cork:boardWidth', (e, bw) => {
+  boardW = typeof bw === 'number' && isFinite(bw) && bw >= BW_MIN && bw <= BW_MAX ? Math.round(bw) : Math.max(BW_MIN, Math.min(BW_MAX, win.getContentBounds().width));
+  fitZoom(); return boardW;
+});
 // iPhone photos: HEIC/HEIF → JPEG (input is the picked file's path, or its bytes)
 handle('cork:heic', async (e, input) => { const out = await heic.toJpeg(input); return out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength); });
 
@@ -186,7 +199,7 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'preload.js'),
       contextIsolation: true, nodeIntegration: false, sandbox: true, webSecurity: true,
-      autoplayPolicy: 'no-user-gesture-required', spellcheck: false,
+      autoplayPolicy: 'no-user-gesture-required', spellcheck: true, // v2.0: the OS's own spell checker (offline on macOS)
       navigateOnDragDrop: false
     }
   });
@@ -198,7 +211,21 @@ function createWindow() {
   wc.on('will-navigate', (e, url) => { if (!url.startsWith(APP_ORIGIN + '/index.html')) { e.preventDefault(); openExternal(url); } });
   wc.on('will-redirect', (e, url) => { if (!url.startsWith(APP_ORIGIN + '/')) e.preventDefault(); });
   wc.on('will-attach-webview', e => e.preventDefault());
+  // v2.0: right-click menu: spelling suggestions for a misspelled word, then cut / copy / paste in text
+  wc.on('context-menu', (e, p) => {
+    const t = [];
+    if (p.misspelledWord) {
+      (p.dictionarySuggestions || []).slice(0, 6).forEach(s => t.push({ label: s, click: () => wc.replaceMisspelling(s) }));
+      if (!t.length) t.push({ label: 'No suggestions', enabled: false });
+      t.push({ type: 'separator' }, { label: 'Learn Spelling', click: () => wc.session.addWordToSpellCheckerDictionary(p.misspelledWord) }, { type: 'separator' });
+    }
+    if (p.isEditable) t.push({ role: 'cut', enabled: p.editFlags.canCut }, { role: 'copy', enabled: p.editFlags.canCopy }, { role: 'paste', enabled: p.editFlags.canPaste }, { type: 'separator' }, { role: 'selectAll' });
+    else if (p.selectionText) t.push({ role: 'copy' });
+    if (t.length) Menu.buildFromTemplate(t).popup({ window: win });
+  });
   trackWindow(win);
+  ['resize', 'maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen'].forEach(ev => win.on(ev, fitZoom)); // v2.0
+  wc.on('did-finish-load', () => { boardW = 0; fitZoom(); });
   win.once('ready-to-show', () => { if (ws.maximized) win.maximize(); win.show(); });
   // let a pending board.json save finish before the window goes away
   let flushed = false;

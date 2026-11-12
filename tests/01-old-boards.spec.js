@@ -13,7 +13,7 @@ test('v1.1.5 board opens, big photos use display copies', async () => {
   });
   const page = await h.launch(ctx);
   try {
-    await h.expect(page.locator('#title')).toHaveText('Us');
+    await h.expect(page.locator('#title')).toHaveText('Our memories'); // v2.0: the big title is the section's name
     await h.expect(page.locator('#sbTree .sbn')).toHaveText(['Our memories', 'Summer']);
     const c = await h.cards(page);
     h.expect(c.map(x => x.id).sort()).toEqual(['bOld', 'nOld', 'old-a.png']);

@@ -21,7 +21,7 @@ test('close and reopen: same board, no prompts, nothing changed', async () => {
     await page.click('#zmOut');
     await page.click('#title'); await page.keyboard.press('Meta+A'); await page.keyboard.type('Our trip');
     await page.mouse.click(20, 700);
-    const before = await h.saved(ctx, d => d.title === 'Our trip' && d.zoom === 0.85 && d.theme === 'midnight');
+    const before = await h.saved(ctx, d => d.sections[0].name === 'Our trip' && d.zoom === 0.85 && d.theme === 'midnight');
     await page.waitForTimeout(1500);
     // measure with nothing hovered or focused (a hovered card straightens and grows a little)
     await page.mouse.move(640, 5); await page.evaluate(() => document.activeElement && document.activeElement.blur()); await page.waitForTimeout(600);
@@ -35,7 +35,7 @@ test('close and reopen: same board, no prompts, nothing changed', async () => {
     h.expect(await page.locator('#start').count()).toBe(0);
     await page.waitForTimeout(1500);
     h.expect(await page.textContent('#title')).toBe('Our trip');
-    h.expect(await h.curSection(page)).toBe('Our memories');
+    h.expect(await h.curSection(page)).toBe('Our trip'); // v2.0: typing in the title renamed the section
     h.expect(await h.zoomText(page)).toBe('85%');
     h.expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe('midnight');
     await page.mouse.move(640, 5); await page.evaluate(() => document.activeElement && document.activeElement.blur()); await page.waitForTimeout(600);

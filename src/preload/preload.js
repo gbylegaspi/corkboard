@@ -36,6 +36,8 @@ contextBridge.exposeInMainWorld('corkNative', {
   sameEntry: (r1, s1, r2, s2) => call('cork:sameEntry', r1, s1, r2, s2),
   rootPath: root => call('cork:rootPath', root),
   reveal: root => call('cork:reveal', root),
+  // v2.0: the board's layout width (null the first time); the window scales the page to fit it, and says which width it used
+  boardWidth: bw => call('cork:boardWidth', bw),
   // menus and window events from the main process
   on: (name, fn) => {
     const ok = ['flush', 'menu'];

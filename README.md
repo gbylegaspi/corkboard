@@ -36,20 +36,28 @@ xattr -dr com.apple.quarantine /Applications/Corkboard.app
   - iPhone photos (HEIC) are turned into JPEGs, and the original is kept.
   - iPhone videos play as they are.
 - **Zoom:** ⌘− and ⌘+ zoom the board out and back in (35–100%). ⌘0 returns to 100%.
+- **Any screen size:** a board keeps the same layout on every screen. On a smaller or bigger screen, or in a smaller window, the whole board is shown smaller or bigger, so nothing shifts or overlaps.
 - **Seeing your files:** **File → Show Board Folder in Finder**.
 - **More boards:** **File → Open Board Folder…** opens another board folder, and **File → Recent Boards** switches between them.
 - **Notes and cards:**
   - Sticky notes, to-do lists and index cards each have a **font** button.
-  - In sticky notes and index cards, **⌘B** and **⌘I** make words bold or italic (also in the Edit menu).
+  - In sticky notes, index cards and to-do lists, **⌘B** and **⌘I** make words bold or italic (also in the Edit menu).
+  - Misspelled words are underlined; right-click one for suggestions. Turn it off in Settings → General → **Check spelling**.
   - The **rotate** handle tilts a note or card; double-click it to straighten.
-  - Drag the **bottom edge** of a note, card or calendar to make it longer or shorter; double-click the edge to reset.
-- **Stacks:** drop a sticky note, to-do list or index card onto another to stack them. The stack button (**Spread out to look**, **Stack again**, **Unstack for good**) lays the cards out and gathers them back. Pins on stacked cards show as one pin on the stack.
+  - Drag the **bottom edge** of a note or card to make it longer or shorter; double-click the edge to reset.
+- **Calendars:** the calendar button on a calendar picks its look: **Month**, **Wide month**, **Mini month**, **Week** or **Tear-off day**.
+- **Photos:** "add a caption" only shows while you point at a photo or video.
+- **Pins:** polaroids, photo strips and calendars come with a real pin. Drag it to move it, or click it to change its colour or remove it, like any pin.
+- **Videos:** Settings → General → **Videos** chooses whether videos play always, when you point at them, or only when you press play, and whether they play with sound. The speaker button on a video sets that video on its own.
+- **Stacks:** drop a polaroid, photo strip, sticky note, to-do list or index card onto another to stack them. The stack button (**Spread out to look**, **Stack again**, **Unstack for good**) lays the cards out and gathers them back. Pins on stacked cards show as one pin on the stack.
 - **To-do lists:** press ⌘A twice to select the whole list, then ⌘C copies it, Delete clears it, and pasting several lines adds one item per line.
 - **Sections:** the button at the top left (or **⌘\\**) opens the sections sidebar. Click a section to go to it.
   - **+ New section** at the bottom adds one. The **+** on a section's row adds a section inside it, and those can have sections inside them too.
   - Drag a section onto another to put it inside, or between two to move it. The arrow next to a section hides or shows what's inside.
   - Double-click a name (or use ✎) to rename it. **×** deletes a section, together with everything inside it.
+- **Title:** the big title at the top is the name of the section you're in. Click it to rename the section.
 - **Toolbar:** Settings, pins and yarn, and zoom are at the top right.
+- **Holding things still:** Settings → General → turn off **Cards lift and straighten when you point at them** to place things precisely.
 - **Themes:** Settings → Theme → **Different theme for this section** gives the section you're looking at its own theme. Sections inside it use that theme too, unless they have their own.
 
 ## Updates

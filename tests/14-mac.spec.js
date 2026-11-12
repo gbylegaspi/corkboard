@@ -42,7 +42,7 @@ test('⌘Q straight after a change still saves it', async () => {
     const exited = new Promise(r => ctx.app.process().once('exit', r));
     await ctx.app.evaluate(({ app }) => setTimeout(() => app.quit(), 0)); // like ⌘Q
     await exited; ctx.app = null;
-    h.expect(h.readBoard(ctx).title).toBe('Quit test');
+    h.expect(h.readBoard(ctx).sections[0].name).toBe('Quit test'); // v2.0: the title renames the section
   } finally { await h.close(ctx); }
 });
 

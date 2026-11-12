@@ -101,7 +101,9 @@ test('a board saved by the app opens in the web version, and back', async () => 
         await p.waitForFunction(() => { const g = document.querySelector('.card.doc .pg'); return g && !g.classList.contains('ld'); }, null, { timeout: 30000 });
         h.expect(await p.$eval('.card.doc .pg', g => g.classList.contains('bad')), webFile).toBe(false);
         h.expect(await p.$eval('.card.note .nte a', a => a.getAttribute('href'))).toBe('https://example.com/map');
-        h.expect(await p.$$eval('#yarn .ypin', g => g.filter(x => x.style.display !== 'none').length)).toBe(2);
+        // 2 pins of her own, plus (v2.0) the real pin each polaroid in section 1 now has instead of a drawn one
+        const own = appSaved.pins.filter(q => q.card ? appSaved.photos.concat(appSaved.notes).some(o => o.id === q.card && o.s === appSaved.sections[0].id) : q.s === appSaved.sections[0].id).length;
+        h.expect(await p.$$eval('#yarn .ypin', g => g.filter(x => x.style.display !== 'none').length)).toBe(own);
         h.expect(await p.$$eval('#yarn .yn', g => g.filter(x => x.style.display !== 'none').length)).toBe(1);
         h.expect(await p.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe('blush');
         h.expect(await p.$eval('.card.idx.ptop .pcount', e => e.textContent).catch(() => null)).toBe(null); // the pile is in section 2
@@ -113,7 +115,9 @@ test('a board saved by the app opens in the web version, and back', async () => 
           await saveOut(p, back);
           const web = JSON.parse(fs.readFileSync(path.join(back, 'board.json'), 'utf8'));
           h.expect(web.cur).toBe(appSaved.sections[1].id);
-          h.expect({ ...web, cur: appSaved.cur }).toEqual(appSaved);  // nothing else changed
+          // nothing else changed (v2.0: except "fx" on pins, which the web version doesn't know; the app then uses "ox", kept for it)
+          const noFx = d => ({ ...d, pins: d.pins.map(({ fx, ...q }) => q) });
+          h.expect(noFx({ ...web, cur: appSaved.cur })).toEqual(noFx(appSaved));
           w.backDir = back;
           ctx.back = back;
         }

@@ -5,7 +5,7 @@ const h = require('./helpers'), fx = require('./fixtures');
 
 test('pins and yarn', async () => {
   const ctx = h.newBoard({ files: { 'p.png': fx.photoSmall(3) }, data: { title: 'T', sections: [{ id: 's1', name: 'One' }], cur: 's1',
-    photos: [{ id: 'p.png', file: 'p.png', kind: 'photo', s: 's1', x: .08, y: 230, rot: 0, z: 1, mode: 'square' }],
+    photos: [{ id: 'p.png', file: 'p.png', kind: 'photo', s: 's1', x: .08, y: 230, rot: 0, z: 1, mode: 'square', pn: 1 }], // pn: its own pin was already removed (see test 18)
     notes: [{ id: 'n', s: 's1', x: .45, y: 240, rot: 0, z: 2, c: '#cdeed6', text: 'note' }] } });
   let page = await h.launch(ctx);
   try {

@@ -15,8 +15,11 @@ const visibleYarns = page => page.$$eval('#yarn .yn', gs => gs.filter(g => g.sty
 // drop card `id` onto card `onto` (dragged by its top edge so its centre lands on the other card's centre)
 async function dropOnto(page, id, onto) {
   await h.settle(page); // the previous drop's animation has finished, so the cards are where they'll stay
-  const a = await (await h.card(page, onto)).boundingBox(), b = await (await h.card(page, id)).boundingBox();
-  await h.drag(page, { x: b.x + b.width / 2, y: b.y + 8 }, { x: a.x + a.width / 2, y: a.y + a.height / 2 - b.height / 2 + 8 }, { after: 700 });
+  const a = await (await h.card(page, onto)).boundingBox(), el = await h.card(page, id), b = await el.boundingBox();
+  // grab it near its top edge, measured from its centre: cards are tilted at random, so a point just inside the top of the
+  // (larger) tilted box can miss the card and land on the board
+  const up = (await el.evaluate(e => e.offsetHeight)) / 2 - 12, cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+  await h.drag(page, { x: cx, y: cy - up }, { x: a.x + a.width / 2, y: a.y + a.height / 2 - up }, { after: 700 });
 }
 
 test('theme per section', async () => {
@@ -58,6 +61,7 @@ test('fonts, bold and italics, longer text', async () => {
     const nel = await h.card(page, nid);
     // bold and italics (Edit → Bold / Italic, the same as ⌘B / ⌘I)
     await h.selectWord(await nel.$('.nte'), 'very'); await clickMenu(ctx.app, 'Edit', 'Bold');
+    await nel.waitForSelector('.nte b'); // (the menu command reaches the page a moment later)
     await h.selectWord(await nel.$('.nte'), 'note'); await clickMenu(ctx.app, 'Edit', 'Italic');
     let d = await h.saved(ctx, d => note(d, nid).rt && note(d, nid).rt.some(p => p.i));
     h.expect(note(d, nid).rt).toEqual([{ t: 'a ' }, { t: 'very', b: true }, { t: ' important ' }, { t: 'note', i: true }]);
@@ -70,6 +74,7 @@ test('fonts, bold and italics, longer text', async () => {
     const iid = await h.addOne(page, 'Index card'); await page.keyboard.type('plan the trip');
     const iel = await h.card(page, iid);
     await h.selectWord(await iel.$('.ixe'), 'trip'); await clickMenu(ctx.app, 'Edit', 'Bold');
+    await iel.waitForSelector('.ixe b');
     await h.cb(iel, 'font'); await page.locator('.pop .pi', { hasText: 'Serif' }).click();
     d = await h.saved(ctx, d => note(d, iid).font === 'serif' && note(d, iid).rt);
     h.expect(note(d, iid).rt).toEqual([{ t: 'plan the ' }, { t: 'trip', b: true }]);
@@ -94,7 +99,7 @@ test('fonts, bold and italics, longer text', async () => {
 test('longer or shorter (bottom edge), and tilt', async () => {
   const ctx = h.newBoard(); const page = await h.launch(ctx);
   try {
-    for (const kind of ['Sticky note', 'Index card', 'Calendar']) {
+    for (const kind of ['Sticky note', 'Index card']) { // (v2.0: calendars pick a look instead; see test 18)
       const id = await h.addOne(page, kind); await page.keyboard.press('Escape'); await page.mouse.click(20, 760);
       const el = await h.card(page, id), b0 = await el.evaluate(e => ({ width: e.offsetWidth, height: e.offsetHeight }));
       // the card's own drop-in has finished; drag its bottom edge down
@@ -184,7 +189,7 @@ test('to-do list: select all (copy, delete, paste)', async () => {
     const id = await h.addOne(page, 'To-do list'), el = await h.card(page, id);
     await page.keyboard.type('milk'); await page.keyboard.press('Enter'); await page.keyboard.type('eggs'); await page.keyboard.press('Enter'); await page.keyboard.type('bread');
     // ⌘A with the item's text already selected → the whole list
-    await page.evaluate(() => document.activeElement.select());
+    await page.evaluate((() => { const e = document.activeElement, r = document.createRange(); r.selectNodeContents(e); const g = getSelection(); g.removeAllRanges(); g.addRange(r); }));
     await page.keyboard.press('Meta+A');
     h.expect(await el.$eval('.tdl', l => l.classList.contains('tdall'))).toBe(true);
     // copy: every item, one per line
@@ -197,13 +202,13 @@ test('to-do list: select all (copy, delete, paste)', async () => {
     h.expect(await el.$eval('.tdl', l => l.classList.contains('tdall'))).toBe(false);
     // pasting several lines over a selected list makes one item per line
     await page.keyboard.type('old');
-    await page.evaluate(() => document.activeElement.select()); await page.keyboard.press('Meta+A');
+    await page.evaluate((() => { const e = document.activeElement, r = document.createRange(); r.selectNodeContents(e); const g = getSelection(); g.removeAllRanges(); g.addRange(r); })); await page.keyboard.press('Meta+A');
     await ctx.app.evaluate(({ clipboard }) => clipboard.writeText('apples\npears\nplums'));
     await ctx.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.paste());
     d = await h.saved(ctx, d => note(d, id).items.length === 3);
     h.expect(note(d, id).items.map(i => i.t)).toEqual(['apples', 'pears', 'plums']);
     // Esc leaves "everything selected" without changing anything
-    await page.evaluate(() => document.activeElement.select()); await page.keyboard.press('Meta+A'); await page.keyboard.press('Escape');
+    await page.evaluate((() => { const e = document.activeElement, r = document.createRange(); r.selectNodeContents(e); const g = getSelection(); g.removeAllRanges(); g.addRange(r); })); await page.keyboard.press('Meta+A'); await page.keyboard.press('Escape');
     h.expect(await el.$eval('.tdl', l => l.classList.contains('tdall'))).toBe(false);
     h.expect(note(await h.saved(ctx), id).items).toHaveLength(3);
     h.expect(ctx.errors).toEqual([]);

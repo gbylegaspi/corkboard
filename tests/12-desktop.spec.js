@@ -104,7 +104,8 @@ test('menus, zoom mapping, recent boards, media, HEIC, drop, single instance, wi
     await h.close(ctx);
     page = await h.launch(ctx);
     h.expect(await ctx.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getBounds())).toEqual({ x: 140, y: 120, width: 1000, height: 700 });
-    h.expect(await page.textContent('#title')).toBe('A');
+    h.expect(await page.textContent('#title')).toBe(await h.curSection(page)); // (board A is open again; the title is its section's name)
+    h.expect(h.readBoard(ctx).title).toBe('A');
     h.expect(ctx.errors).toEqual([]);
   } finally { await h.close(ctx); }
 });

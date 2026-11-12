@@ -10,7 +10,7 @@
 <body>
 <div id="board">
   <header>
-    <h1 id="title" contenteditable="true" spellcheck="false">Corkboard</h1>
+    <h1 id="title" contenteditable="true" spellcheck="false"></h1>
     <div class="sub" id="secPath"></div>
   </header>
   <div id="layer"></div>
@@ -97,6 +97,19 @@
       <section class="sgrp">
         <h3>Motion</h3>
         <label class="trow"><span>Polaroids dangle when moved</span><input type="checkbox" class="sw" id="dangleOn"></label>
+        <label class="trow"><span>Cards lift and straighten when you point at them</span><input type="checkbox" class="sw" id="hoverOn"></label>
+        <p class="shint2">Turn this off to line things up precisely.</p>
+      </section>
+      <section class="sgrp">
+        <h3>Videos</h3>
+        <label class="trow"><span>Play videos</span><select id="vidPlay" class="ssel"><option value="hover">When you point at them</option><option value="always">Always</option><option value="click">Only when you press play</option></select></label>
+        <label class="trow"><span>With sound</span><input type="checkbox" class="sw" id="vidSnd"></label>
+        <p class="shint2">Each video can have its own choice too: the speaker button on the video.</p>
+      </section>
+      <section class="sgrp">
+        <h3>Typing</h3>
+        <label class="trow"><span>Check spelling</span><input type="checkbox" class="sw" id="spellOn"></label>
+        <p class="shint2">Misspelled words are underlined. Right-click one for suggestions.</p>
       </section>
     </div>
     <div class="spane" id="pn-theme" role="tabpanel" aria-labelledby="tb-theme" hidden>
@@ -161,7 +174,7 @@
 </div></div>
 <div id="rd" role="dialog" aria-modal="true" aria-label="Document"><div class="rdp ld"><canvas></canvas></div><button class="rdn prv" title="Previous page" aria-label="Previous page">&#8249;</button><button class="rdn nxt" title="Next page" aria-label="Next page">&#8250;</button><div class="rdc" aria-live="polite"></div><button id="rdX" title="Close" aria-label="Close">&times;</button></div>
 <div id="lb" role="dialog" aria-modal="true" aria-label="Video"><div class="lbm fxm"><video controls playsinline></video><i class="fxl w"></i><i class="fxl f"></i><i class="fxl v"></i><i class="fxl g"></i></div><button id="lbX" title="Close" aria-label="Close">&times;</button></div>
-<svg id="yarn" style="display:none" aria-label="Pins and yarn"><path class="ytmp" style="display:none"/><g class="yg"></g><g class="pg2"></g></svg>
+<svg id="yarn" style="display:none" aria-label="Pins and yarn"><defs><clipPath id="ycut" clipPathUnits="userSpaceOnUse"><path clip-rule="evenodd"/></clipPath></defs><path class="ytmp" style="display:none"/><g class="ycl" clip-path="url(#ycut)"><g class="yg"></g><g class="pg2"></g></g></svg>
 <div id="ytools" class="ytools" hidden><b>Yarn</b><span class="ytip">Tap the board or a card to stick in a pin &middot; drag from one pin to another to tie yarn</span><span class="ytc"></span><button class="sbtn alt" id="yClear" title="Remove every pin and yarn in this section">Remove all</button><button class="sbtn" id="yDone">Done</button></div>
 <div id="hbar" class="hbar" hidden aria-hidden="true"><i></i></div>
 <button class="edge edgeL" id="edgeL" hidden title="Scroll left to see it (double-click to zoom out and see everything)"><span>&lsaquo;</span> <b>0</b> more</button>

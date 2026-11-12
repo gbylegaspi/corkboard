@@ -125,4 +125,4 @@ async function addPhotos(page, files, mode = 'square', preset) {
 }
 async function addOne(page, label) { const before = await cards(page); await add(page, label); await page.waitForFunction(k => document.querySelectorAll('#layer .card').length === k, before.length + 1); await page.waitForTimeout(500); return newCardId(page, before); }
 
-module.exports = { APP, appCommand, newBoard, launch, openBoard, close, readBoard, saved, list, cards, card, newCardId, cb, add, addOne, addPhotos, drag, grip, zoomText, selectWord, buttonBox, expect };
+module.exports = { APP, appCommand, settle, newBoard, launch, openBoard, close, readBoard, saved, list, cards, card, newCardId, cb, add, addOne, addPhotos, drag, grip, zoomText, selectWord, buttonBox, expect };

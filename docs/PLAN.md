@@ -1,6 +1,19 @@
 # Corkboard desktop: plan
 
-Status (2026-11-12): **Phases 1–4 done for macOS.** `npm test` runs 24 Electron tests and passes against the source and against the installed universal `.dmg` build, including macOS behaviour (Dock, ⌘Q saving, password-protected PDFs, sound without a click). `npm run build:mac` makes `dist/Corkboard-1.6.3-mac-universal.dmg` (229 MB, ad-hoc signed, Apple Silicon and Intel). The Windows configuration is written but not built or tested; that waits until you ask.
+Status (2026-11-12): **Phases 1–4 done for macOS.** `npm test` runs 29 Electron tests and passes against the source and against the installed universal `.dmg` build, including macOS behaviour (Dock, ⌘Q saving, password-protected PDFs, sound without a click). `npm run build:mac` makes `dist/Corkboard-1.6.3-mac-universal.dmg` (229 MB, ad-hoc signed, Apple Silicon and Intel). The Windows configuration is written but not built or tested; that waits until you ask.
+
+**Version 1.7.0** (her requests; app only, the web file isn't updated):
+- **Theme per section:** `sections[].theme`. Optional; the board's theme applies otherwise.
+- **Fonts:** a font button (`font`) on sticky notes, to-do lists and index cards.
+- **Bold and italics:** ⌘B / ⌘I in sticky notes and index cards, stored as `b` / `i` on the `rt` pieces.
+- **Longer text:** notes 1,000 characters (were 160); to-do items 300 (were 120); 60 items per list (were 30).
+- **Longer or shorter:** drag the bottom edge of notes, to-do lists, index cards and calendars (`hs`).
+- **Tilt:** a rotate handle on notes, to-do lists and index cards.
+- **Mixed stacks:** sticky notes, to-do lists and index cards. "Spread out to look" (`fan`) keeps the group, "Stack again" gathers it, "Unstack for good" ends it.
+- **Pins on stacks:** one pin per stack, drawn on the top card; each card's own pins return when the stack is spread or unstacked. Pins in board.json are never changed.
+- **To-do select all:** ⌘A twice selects the list; copy, cut, delete and paste work on the whole list.
+
+The web version opens these boards but ignores the new fields; saving there can shorten long notes and drop bold and italics. `npm test` runs 29 tests.
 
 **Version 1.6.4:** adds Help → Check for Updates… (asks GitHub's latest-release API only when clicked, and offers to open the download page; nothing downloads or installs by itself). It also makes dragging smoother and removes the dark placeholder flash:
 - The sound engine is set up in idle time instead of on the first drag. On a 6× slowed CPU that first drag's freeze went from 175 ms to 24 ms.

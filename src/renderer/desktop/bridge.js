@@ -46,6 +46,8 @@
   N.on('menu', function (name, arg) {
     if (name === 'open') { A.pick(); return; }
     if (name === 'mount' && arg && arg.root) { A.mount(window.__corkShim.handleFor(arg)); return; }
+    // Edit → Bold / Italic: only in sticky notes and index cards (their editors allow it)
+    if (name === 'bold' || name === 'italic') { var ed = document.activeElement; if (ed && ed._rich && ed.isContentEditable) document.execCommand(name); return; }
     if (!A.hasBoard() || busy()) return;
     if (name === 'zoomIn') press('zmIn');
     else if (name === 'zoomOut') press('zmOut');

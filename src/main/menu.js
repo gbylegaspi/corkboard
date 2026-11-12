@@ -27,7 +27,12 @@ function build(o) {
   ] });
   tpl.push({ label: 'Edit', submenu: [
     { role: 'undo' }, { role: 'redo' }, { type: 'separator' },
-    { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { type: 'separator' }, { role: 'selectAll' }
+    { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { type: 'separator' }, { role: 'selectAll' },
+    // v1.7: bold / italic in sticky notes and index cards. ⌘B / ⌘I are handled by the note itself (registerAccelerator: false
+    // only shows the shortcut here), so a key press is never applied twice
+    { type: 'separator' },
+    { label: 'Bold', accelerator: 'CmdOrCtrl+B', registerAccelerator: false, click: () => o.send('menu', 'bold') },
+    { label: 'Italic', accelerator: 'CmdOrCtrl+I', registerAccelerator: false, click: () => o.send('menu', 'italic') }
   ] });
   const zoom = (name, label, acc, extra) => Object.assign({ label, accelerator: acc, enabled: o.hasBoard, click: () => o.send('menu', name) }, extra || {});
   const view = [

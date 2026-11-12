@@ -38,6 +38,14 @@ xattr -dr com.apple.quarantine /Applications/Corkboard.app
 - **Zoom:** ⌘− and ⌘+ zoom the board out and back in (35–100%). ⌘0 returns to 100%.
 - **Seeing your files:** **File → Show Board Folder in Finder**.
 - **More boards:** **File → Open Board Folder…** opens another board folder, and **File → Recent Boards** switches between them.
+- **Notes and cards:**
+  - Sticky notes, to-do lists and index cards each have a **font** button.
+  - In sticky notes and index cards, **⌘B** and **⌘I** make words bold or italic (also in the Edit menu).
+  - The **rotate** handle tilts a note or card; double-click it to straighten.
+  - Drag the **bottom edge** of a note, card or calendar to make it longer or shorter; double-click the edge to reset.
+- **Stacks:** drop a sticky note, to-do list or index card onto another to stack them. The stack button (**Spread out to look**, **Stack again**, **Unstack for good**) lays the cards out and gathers them back. Pins on stacked cards show as one pin on the stack.
+- **To-do lists:** press ⌘A twice to select the whole list, then ⌘C copies it, Delete clears it, and pasting several lines adds one item per line.
+- **Themes:** Settings → Theme → **Different theme for this section** gives the section you're looking at its own theme.
 
 ## Updates
 

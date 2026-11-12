@@ -42,10 +42,23 @@ test('index card piles', async () => {
     d = await h.saved(ctx, d => !d.notes.find(n => n.id === t).pile && d.notes.filter(n => n.pile === pile).length === 2);
     const t2 = await top();
     h.expect(await (await h.card(page, t2)).$eval('.pcount', e => e.textContent)).toBe('2 cards');
-    // spread the rest out: no pile left
-    await h.cb(await h.card(page, t2), 'pspread'); await page.waitForTimeout(500);
-    d = await h.saved(ctx, d => d.notes.every(n => !n.pile));
+    // spread out to look: the group is kept (fan), every card shows the stack button
+    await h.cb(await h.card(page, t2), 'pspread');
+    await page.locator('.pop .pi', { hasText: 'Spread out to look' }).click(); await page.waitForTimeout(500);
+    d = await h.saved(ctx, d => d.notes.filter(n => n.pile === pile && n.fan === true).length === 2);
+    h.expect((await h.cards(page)).filter(c => /\bfan\b/.test(c.cls))).toHaveLength(2);
     h.expect((await h.cards(page)).filter(c => /inpile/.test(c.cls))).toHaveLength(0);
+    // stack again
+    await h.cb(await h.card(page, t2), 'pspread');
+    await page.locator('.pop .pi', { hasText: 'Stack again' }).click(); await page.waitForTimeout(500);
+    d = await h.saved(ctx, d => d.notes.filter(n => n.pile === pile).length === 2 && d.notes.every(n => !n.fan));
+    const t3 = await top();
+    h.expect(await (await h.card(page, t3)).$eval('.pcount', e => e.textContent)).toBe('2 cards');
+    // unstack for good: no group left
+    await h.cb(await h.card(page, t3), 'pspread');
+    await page.locator('.pop .pi', { hasText: 'Unstack for good' }).click(); await page.waitForTimeout(500);
+    d = await h.saved(ctx, d => d.notes.every(n => !n.pile && !n.fan));
+    h.expect((await h.cards(page)).filter(c => /inpile|\bfan\b/.test(c.cls))).toHaveLength(0);
     // delete one (two taps)
     const del = await h.card(page, ids[0]);
     await h.cb(del, 'del'); await h.cb(del, 'del');

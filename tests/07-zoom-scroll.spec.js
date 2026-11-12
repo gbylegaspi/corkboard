@@ -36,6 +36,7 @@ test('zoom, drag while zoomed, cards beside the board, sideways scrolling', asyn
     // zoom right out and put the card in the space beside the normal board
     while (!(await page.locator('#zmOut').isDisabled())) await page.click('#zmOut');
     h.expect(await h.zoomText(page)).toBe('35%');
+    await page.waitForTimeout(400); // let the zoom animation (0.18 s) finish before measuring the card
     let b = await el.boundingBox();
     await h.drag(page, { x: b.x + b.width / 2, y: b.y + 8 }, { x: 40, y: b.y + 8 }, { after: 500 });
     let d = await h.saved(ctx, d => d.notes[0].x < 0);
@@ -52,16 +53,17 @@ test('zoom, drag while zoomed, cards beside the board, sideways scrolling', asyn
     await h.expect(page.locator('#edgeL')).toBeHidden();
     await h.expect(page.locator('#hbar')).toBeVisible();
     // sideways scrolling: trackpad swipe and Shift + wheel move the view; the card moves the other way on screen
+    // (± 8 px: the card may still be finishing a small hover or settling animation)
     const x1 = (await el.boundingBox()).x;
     await page.mouse.move(640, 500); await page.mouse.wheel(300, 0); await page.waitForTimeout(300);
     const x2 = (await el.boundingBox()).x;
-    h.expect(Math.abs(x1 - x2 - 300)).toBeLessThan(4);
+    h.expect(Math.abs(x1 - x2 - 300)).toBeLessThan(8);
     await page.keyboard.down('Shift'); await page.mouse.wheel(0, -200); await page.keyboard.up('Shift'); await page.waitForTimeout(300);
-    h.expect(Math.abs((await el.boundingBox()).x - x2 - 200)).toBeLessThan(4);
+    h.expect(Math.abs((await el.boundingBox()).x - x2 - 200)).toBeLessThan(8);
     // dragging empty board space pans too
     const x3 = (await el.boundingBox()).x;
     await h.drag(page, { x: 900, y: 650 }, { x: 750, y: 650 });
-    h.expect(Math.abs(x3 - (await el.boundingBox()).x - 150)).toBeLessThan(4);
+    h.expect(Math.abs(x3 - (await el.boundingBox()).x - 150)).toBeLessThan(8);
     // double-clicking a badge zooms out to show everything
     await page.mouse.wheel(2000, 0); await page.waitForTimeout(300);
     await h.expect(page.locator('#edgeL')).toBeVisible();

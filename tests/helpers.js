@@ -125,4 +125,11 @@ async function addPhotos(page, files, mode = 'square', preset) {
 }
 async function addOne(page, label) { const before = await cards(page); await add(page, label); await page.waitForFunction(k => document.querySelectorAll('#layer .card').length === k, before.length + 1); await page.waitForTimeout(500); return newCardId(page, before); }
 
-module.exports = { APP, appCommand, settle, newBoard, launch, openBoard, close, readBoard, saved, list, cards, card, newCardId, cb, add, addOne, addPhotos, drag, grip, zoomText, selectWord, buttonBox, expect };
+// v1.8: sections live in the sidebar (the tree is rendered even while it's closed)
+async function openSections(page) { if (!(await page.locator('#sb.open').count())) { await page.click('#sbBtn'); await page.waitForTimeout(350); } }
+function secRow(page, name) { return page.locator('#sbTree .sbr', { has: page.locator('.sbn', { hasText: new RegExp('^' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$') }) }); }
+async function goSection(page, name) { await openSections(page); await secRow(page, name).locator('.sbgo').click(); await page.waitForTimeout(400); }
+async function newSection(page) { await openSections(page); await page.click('#sbNew'); }
+async function curSection(page) { return page.textContent('#sbCur'); }
+
+module.exports = { APP, openSections, secRow, goSection, newSection, curSection, appCommand, settle, newBoard, launch, openBoard, close, readBoard, saved, list, cards, card, newCardId, cb, add, addOne, addPhotos, drag, grip, zoomText, selectWord, buttonBox, expect };

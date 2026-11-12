@@ -32,7 +32,7 @@ test('theme per section', async () => {
     let d = await h.saved(ctx, d => d.sections[0].theme === 'midnight');
     h.expect(d.theme).toBe('classic');                                      // the board's own theme is unchanged
     await page.click('#setX');
-    await page.locator('#tabs .tab', { hasText: 'Two' }).click(); await page.waitForTimeout(300);
+    await h.goSection(page, 'Two'); await page.waitForTimeout(300);
     h.expect(await theme()).toBe('classic');
     // picking a theme in "Two" (no own theme) changes the board's theme, not "One"
     await page.click('#gear'); await page.click('#tb-theme');
@@ -41,7 +41,7 @@ test('theme per section', async () => {
     d = await h.saved(ctx, d => d.theme === 'linen');
     h.expect(d.sections[0].theme).toBe('midnight');
     await page.click('#setX');
-    await page.locator('#tabs .tab', { hasText: 'One' }).click(); await page.waitForTimeout(300);
+    await h.goSection(page, 'One'); await page.waitForTimeout(300);
     h.expect(await theme()).toBe('midnight');
     // switching it off: "One" follows the board again
     await page.click('#gear'); await page.click('#tb-theme'); await page.locator('#secThm input').click();

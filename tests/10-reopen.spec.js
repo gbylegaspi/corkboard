@@ -14,9 +14,9 @@ test('close and reopen: same board, no prompts, nothing changed', async () => {
     await page.setInputFiles('#stkFile', fx.sticker()); await page.waitForSelector('#layer .card.sticker');
     await page.setInputFiles('#file', fx.pdf5()); await page.waitForSelector('#layer .card.doc');
     // a second section, a theme, a zoom level and a title
-    await page.click('#tabs .tab.add'); await page.locator('#tplG .tplt', { hasText: 'Birthday' }).click(); await page.click('#tplOk');
+    await h.newSection(page); await page.locator('#tplG .tplt', { hasText: 'Birthday' }).click(); await page.click('#tplOk');
     await page.waitForTimeout(800);
-    await page.locator('#tabs .tab', { hasText: 'Our memories' }).click(); await page.waitForTimeout(500);
+    await h.goSection(page, 'Our memories'); await page.waitForTimeout(500);
     await page.click('#gear'); await page.click('#tb-theme'); await page.locator('#thmList .thm', { hasText: 'Midnight' }).click(); await page.click('#setX');
     await page.click('#zmOut');
     await page.click('#title'); await page.keyboard.press('Meta+A'); await page.keyboard.type('Our trip');
@@ -35,7 +35,7 @@ test('close and reopen: same board, no prompts, nothing changed', async () => {
     h.expect(await page.locator('#start').count()).toBe(0);
     await page.waitForTimeout(1500);
     h.expect(await page.textContent('#title')).toBe('Our trip');
-    h.expect(await page.textContent('#tabs .tab.on')).toBe('Our memories');
+    h.expect(await h.curSection(page)).toBe('Our memories');
     h.expect(await h.zoomText(page)).toBe('85%');
     h.expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe('midnight');
     await page.mouse.move(640, 5); await page.evaluate(() => document.activeElement && document.activeElement.blur()); await page.waitForTimeout(600);

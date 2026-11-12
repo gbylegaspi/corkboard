@@ -3,7 +3,7 @@
 (function(){
 var board=document.getElementById('board'),fileEl=document.getElementById('file'),empty=document.getElementById('empty'),
     titleEl=document.getElementById('title'),startEl=document.getElementById('start'),fab=document.getElementById('fab'),
-    addBtn=document.getElementById('addBtn'),noteBtn=document.getElementById('noteBtn'),tabsEl=document.getElementById('tabs');
+    addBtn=document.getElementById('addBtn'),noteBtn=document.getElementById('noteBtn');
 var dir=null,photosDir=null,data={title:'Corkboard',sections:[],photos:[],notes:[],labels:[],stickers:[],templates:[],pins:[],yarns:[],cur:null,sound:true,volume:.8,theme:'classic',dangle:true,custom:{color:'#7d9a8c',texture:'cork',strength:50,text:'auto',tabs:'auto',buttons:'auto'},style:{frame:'#fffdf8',pin:'#d6264f',notes:'classic',font:'auto',label:'tape'},wallpaper:null},
     cards={},files={},urls={},topZ=1,st=null,sound=true,volume=.8,ac=null,master=null;
 
@@ -713,7 +713,7 @@ function renderLabel(l){
   // app fix: keep the label's buttons on screen: below the label when the section tabs would cover them,
   // and nudged sideways at the edges of the window
   function fitBar(){var bar=el.querySelector('.lbar');el.classList.remove('lbdn');bar.style.marginLeft='';
-    if(bar.getBoundingClientRect().top<tabsEl.getBoundingClientRect().bottom+2)el.classList.add('lbdn');
+    if(bar.getBoundingClientRect().top<document.getElementById('lfab').getBoundingClientRect().bottom+4)el.classList.add('lbdn'); // v1.8: under the top toolbars
     var r=bar.getBoundingClientRect(),vw=document.documentElement.clientWidth,dx=r.left<6?6-r.left:r.right>vw-6?vw-6-r.right:0;
     if(dx)bar.style.marginLeft=(dx/ZM).toFixed(1)+'px'}
   el.addEventListener('pointerenter',fitBar);el.addEventListener('focusin',fitBar);
@@ -1302,7 +1302,22 @@ function addNote(kind){{
 }
 
 // ---- sections ----
+// v1.8: sections can sit inside other sections, any depth deep (sections[].parent = the id of the section it's in).
+// The list stays flat: siblings keep their order in it. sections[].fold = its sub-sections are tucked away in the sidebar.
+function secById(id){for(var i=0;i<data.sections.length;i++)if(data.sections[i].id===id)return data.sections[i];return null}
+function secKids(pid){return data.sections.filter(function(s){return (s.parent||null)===(pid||null)})}
+function secPathOf(sc){var out=[],seen={};while(sc&&!seen[sc.id]){seen[sc.id]=1;out.unshift(sc);sc=sc.parent?secById(sc.parent):null}return out}
+function secTree(id){var out=[id];for(var i=0;i<out.length;i++)secKids(out[i]).forEach(function(k){out.push(k.id)});return out} // a section and everything inside it
+function secOrder(){var out=[];(function walk(pid,d){secKids(pid).forEach(function(s){out.push({sc:s,d:d});walk(s.id,d+1)})})(null,0);return out}
+// parents that don't exist, or that loop back round, are dropped (the section moves to the top level)
+function cleanSecTree(){
+  var ids={};data.sections.forEach(function(s){ids[s.id]=1});
+  data.sections.forEach(function(s){if('parent' in s&&(typeof s.parent!=='string'||!ids[s.parent]||s.parent===s.id))delete s.parent;if(s.fold!==true)delete s.fold});
+  data.sections.forEach(function(s){var seen={},p=s;while(p&&p.parent){if(seen[p.id]){delete p.parent;break}seen[p.id]=1;p=secById(p.parent)}});
+}
+function goSection(id){if(data.cur!==id&&secById(id)){sfx.tab();data.cur=id;save();renderSection()}}
 function renderSection(){
+  secPathOf(curSection()).slice(0,-1).forEach(function(s){delete s.fold}); // v1.8: going to a section shows where it is in the sidebar
   if(typeof setPan==='function'&&PAN)setPan(0);closePop();if(sel)clearSel();Object.keys(cards).forEach(function(k){cards[k].remove()});cards={};
   data.photos.filter(function(p){return p.s===data.cur}).forEach(renderPhoto);
   data.notes.filter(function(n){return n.s===data.cur}).forEach(renderNote);
@@ -1310,44 +1325,124 @@ function renderSection(){
   shown();if(typeof yarnFor==='function')yarnFor(600);renderTabs();fit();
   if(dir)applyTheme(curTheme()); // v1.7: the section's own theme, if it has one
 }
-function rename(sc,b){
-  var i=document.createElement('input');i.className='tab on';i.value=sc.name;i.maxLength=24;b.replaceWith(i);i.focus();i.select();
-  var done=false;function fin(){if(done)return;done=true;sc.name=i.value.trim()||sc.name;save();renderTabs()}
-  i.addEventListener('blur',fin);
-  i.addEventListener('keydown',function(e){if(e.key==='Enter')fin();if(e.key==='Escape'){i.value=sc.name;fin()}});
-}
 function deleteSection(id){
-  if(data.sections.length<2)return;
-  var gone=data.photos.filter(function(p){return p.s===id});
-  data.photos=data.photos.filter(function(p){return p.s!==id});
-  gone.forEach(function(p){dropFiles(p);dropUrls(p)});
-  data.notes=data.notes.filter(function(n){return n.s!==id});
-  data.labels=data.labels.filter(function(l){return l.s!==id});
+  var gone={},sc=secById(id),par=sc&&sc.parent;secTree(id).forEach(function(k){gone[k]=1}); // v1.8: its sub-sections go too
+  if(data.sections.every(function(s){return gone[s.id]}))return; // there's always at least one section
+  var ph=data.photos.filter(function(p){return gone[p.s]});
+  data.photos=data.photos.filter(function(p){return !gone[p.s]});
+  ph.forEach(function(p){dropFiles(p);dropUrls(p)});
+  data.notes=data.notes.filter(function(n){return !gone[n.s]});
+  data.labels=data.labels.filter(function(l){return !gone[l.s]});
   // v1.6.3 fix: also drop pins stuck in this section's cards, and any yarn tied to a removed pin
   var live={};data.photos.concat(data.notes,data.labels).forEach(function(o){live[o.id]=1});
-  data.pins=data.pins.filter(function(p){return p.card?!!live[p.card]:p.s!==id});
+  data.pins=data.pins.filter(function(p){return p.card?!!live[p.card]:!gone[p.s]});
   var pk={};data.pins.forEach(function(p){pk[p.id]=1});data.yarns=data.yarns.filter(function(y){return pk[y.a]&&pk[y.b]});yarnFor(100);
-  data.sections=data.sections.filter(function(s){return s.id!==id});
-  var wasCur=data.cur===id;if(wasCur)data.cur=data.sections[0].id;
+  data.sections=data.sections.filter(function(s){return !gone[s.id]});
+  var wasCur=!!gone[data.cur];if(wasCur)data.cur=par&&secById(par)?par:secOrder()[0].sc.id;
   save();if(wasCur)renderSection();else renderTabs();
   if(setEl.style.display==='flex')renderSecList();
 }
-function renderTabs(){
-  tabsEl.innerHTML='';setTimeout(function(){if(layer){zOrg();fit()}},0);
-  data.sections.forEach(function(sc){
-    var b=document.createElement('button');b.className='tab'+(sc.id===data.cur?' on':'');b.textContent=sc.name;
-    b.addEventListener('click',function(){if(data.cur!==sc.id){sfx.tab();data.cur=sc.id;save();renderSection()}});
-    b.addEventListener('dblclick',function(){rename(sc,b)});
-    tabsEl.appendChild(b);
-    if(sc.id===data.cur&&data.sections.length>1){
-      var x=document.createElement('button');x.className='tab x';x.textContent='×';x.title='Delete this section';tabsEl.appendChild(x);
-      armDel(x,'Delete section & its contents?',function(){deleteSection(sc.id)});
-    }
-  });
-  var a=document.createElement('button');a.className='tab add';a.textContent='+ Section';
-  a.addEventListener('click',openTemplates);
-  tabsEl.appendChild(a);
+function delLabel(id){var n=secTree(id).length-1;return n?'Delete it and '+plural(n,'sub-section','sub-sections')+'?':'Delete section & its contents?'}
+function canDelete(id){var t=secTree(id);return data.sections.some(function(s){return t.indexOf(s.id)<0})}
+// move a section: before or after another one, or inside it (at the end, or 'first')
+function moveSection(id,tid,w){
+  var sc=secById(id),t=tid?secById(tid):null,a=data.sections;if(!sc||(t&&secTree(id).indexOf(tid)>=0))return;
+  a.splice(a.indexOf(sc),1);
+  if(!t){delete sc.parent;a.push(sc)}
+  else if(w==='into'||w==='first'){sc.parent=t.id;delete t.fold;var ks=secKids(t.id);if(w==='first'&&ks.length)a.splice(a.indexOf(ks[0]),0,sc);else a.push(sc)}
+  else{if(t.parent)sc.parent=t.parent;else delete sc.parent;a.splice(a.indexOf(t)+(w==='after'?1:0),0,sc)}
+  sfx.blip();save();renderTabs();if(setEl.style.display==='flex')renderSecList();
+  if(dir)applyTheme(curTheme()); // a theme can come from the section it's in
 }
+
+// ---- v1.8: the sections sidebar (slides in from the left over the board) ----
+var sbEl=document.getElementById('sb'),sbTree=document.getElementById('sbTree'),sbBtn=document.getElementById('sbBtn'),sbOpen=false,secDrag=null;
+var SVG_CAR='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',SVG_PLUS='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',SVG_PEN='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
+function secCount(id){var n=0;[data.photos,data.notes,data.labels].forEach(function(l){l.forEach(function(o){if(o.s===id)n++})});return n}
+function setSidebar(o){
+  if(o&&!dir)return;o=!!o;if(o===sbOpen)return;
+  sbOpen=o;sbEl.classList.toggle('open',o);sbEl.setAttribute('aria-hidden',o?'false':'true');sbBtn.setAttribute('aria-expanded',o?'true':'false');document.body.classList.toggle('sbopen',o);
+  if(o){closePop();sfx.blip();renderTabs();var f=sbTree.querySelector('.sbr.on .sbgo');if(f)setTimeout(function(){f.focus({preventScroll:true});f.scrollIntoView({block:'nearest'})},40)}
+  else if(sbEl.contains(document.activeElement))sbBtn.focus({preventScroll:true});
+}
+function focusRow(id){var g=sbTree.querySelector('.sbr[data-id="'+CSS.escape(id)+'"] .sbgo');if(g)g.focus({preventScroll:true});return g}
+function clearDrop(){sbTree.querySelectorAll('.dbefore,.dafter,.dinto').forEach(function(r){r.classList.remove('dbefore','dafter','dinto')});sbTree.querySelectorAll('.sbr').forEach(function(r){r._w=null});sbTree.classList.remove('dend')}
+function renderTabs(){
+  setTimeout(function(){if(layer){zOrg();fit()}},0);
+  var cur=curSection(),path=secPathOf(cur);
+  document.getElementById('sbCur').textContent=cur?cur.name:'';
+  document.getElementById('secPath').textContent=path.length>1?path.map(function(s){return s.name}).join('  ›  '):'';
+  sbTree.innerHTML='';var hideKids={};
+  secOrder().forEach(function(o){
+    var sc=o.sc;if(sc.parent&&hideKids[sc.parent]){hideKids[sc.id]=1;return}
+    if(sc.fold)hideKids[sc.id]=1;
+    sbTree.appendChild(secRow(sc,o.d));
+  });
+}
+function secRow(sc,d){
+  var kids=secKids(sc.id).length,on=sc.id===data.cur;
+  var r=document.createElement('div');r.className='sbr'+(on?' on':'');r.style.setProperty('--d',d);r.dataset.id=sc.id;r.draggable=true;
+  r.setAttribute('role','treeitem');r.setAttribute('aria-level',String(d+1));r.setAttribute('aria-selected',on?'true':'false');if(kids)r.setAttribute('aria-expanded',sc.fold?'false':'true');
+  if(kids){var c=document.createElement('button');c.className='sbcar'+(sc.fold?'':' open');c.tabIndex=-1;c.title=sc.fold?'Show what’s inside':'Tuck away what’s inside';c.setAttribute('aria-label',c.title);c.innerHTML=SVG_CAR;
+    c.addEventListener('click',function(e){e.stopPropagation();if(sc.fold)delete sc.fold;else sc.fold=true;sfx.blip();save();renderTabs();focusRow(sc.id)});r.appendChild(c)}
+  else{var sp=document.createElement('span');sp.className='sbsp';r.appendChild(sp)}
+  var go=document.createElement('button');go.className='sbgo';if(on)go.setAttribute('aria-current','true');go.title=sc.name;
+  var nm=document.createElement('span');nm.className='sbn';nm.textContent=sc.name;
+  var n=secCount(sc.id),ct=document.createElement('span');ct.className='sbc';ct.textContent=n?String(n):'';
+  go.appendChild(nm);go.appendChild(ct);
+  go.addEventListener('click',function(){goSection(sc.id);setSidebar(false)});
+  go.addEventListener('dblclick',function(e){e.preventDefault();secRename(sc,go)});
+  r.appendChild(go);
+  var act=document.createElement('span');act.className='sbact';
+  function ab(cls,title,html,fn){var b=document.createElement('button');b.className=cls;b.title=title;b.setAttribute('aria-label',title);b.innerHTML=html;if(fn)b.addEventListener('click',function(e){e.stopPropagation();fn()});act.appendChild(b);return b}
+  ab('sbadd','Add a section inside “'+sc.name+'”',SVG_PLUS,function(){openTemplates(sc.id)});
+  ab('sbren','Rename',SVG_PEN,function(){secRename(sc,go,true)});
+  if(canDelete(sc.id)){var x=ab('sbdel','Delete “'+sc.name+'”','×');armDel(x,delLabel(sc.id),function(){deleteSection(sc.id)})}
+  r.appendChild(act);
+  // drag to move it: near a row's top or bottom edge = before or after it, over the middle = inside it
+  r.addEventListener('dragstart',function(e){if(!r.draggable){e.preventDefault();return}secDrag=sc.id;r.classList.add('dragging');e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/x-cork-section',sc.id)}catch(_){}});
+  r.addEventListener('dragend',function(){secDrag=null;clearDrop();r.classList.remove('dragging')});
+  r.addEventListener('dragover',function(e){
+    if(!secDrag||secTree(secDrag).indexOf(sc.id)>=0)return;
+    e.preventDefault();e.stopPropagation();e.dataTransfer.dropEffect='move';
+    var b=r.getBoundingClientRect(),f=(e.clientY-b.top)/b.height,w=f<.28?'before':f>.72?'after':'into';
+    if(r._w!==w){clearDrop();r._w=w;r.classList.add('d'+w)}
+  });
+  r.addEventListener('drop',function(e){
+    if(!secDrag)return;e.preventDefault();e.stopPropagation();var w=r._w,id=secDrag;clearDrop();if(!w)return;
+    if(w==='after'&&secKids(sc.id).length&&!sc.fold)w='first'; // the line shows above its first sub-section
+    moveSection(id,sc.id,w);
+  });
+  return r;
+}
+function secRename(sc,go,keys){
+  var r=go.parentNode;r.draggable=false;
+  var i=document.createElement('input');i.className='sbin';i.value=sc.name;i.maxLength=24;i.setAttribute('aria-label','Section name');go.replaceWith(i);i.focus();i.select();
+  var done=false;function fin(k){if(done)return;done=true;sc.name=i.value.trim()||sc.name;save();renderTabs();if(setEl.style.display==='flex')renderSecList();if(k&&sbOpen)focusRow(sc.id)}
+  i.addEventListener('blur',function(){fin(false)});
+  i.addEventListener('keydown',function(e){e.stopPropagation();if(e.key==='Enter'){e.preventDefault();fin(true)}if(e.key==='Escape'){e.preventDefault();i.value=sc.name;fin(true)}});
+  i.addEventListener('dblclick',function(e){e.stopPropagation()});
+}
+// dropping below the last row: back to the top level, at the end
+sbTree.addEventListener('dragover',function(e){if(!secDrag)return;e.preventDefault();e.dataTransfer.dropEffect='move';if(!sbTree.classList.contains('dend')){clearDrop();sbTree.classList.add('dend')}});
+sbTree.addEventListener('dragleave',function(e){if(!sbTree.contains(e.relatedTarget))clearDrop()});
+sbTree.addEventListener('drop',function(e){if(!secDrag)return;e.preventDefault();var id=secDrag;clearDrop();moveSection(id,null)});
+// keys: up/down between sections, right/left open and close, F2 renames
+sbTree.addEventListener('keydown',function(e){
+  var go=e.target.closest&&e.target.closest('.sbgo');if(!go)return;
+  var rows=[].slice.call(sbTree.querySelectorAll('.sbr')),r=go.parentNode,i=rows.indexOf(r),sc=secById(r.dataset.id);if(!sc)return;
+  var kids=secKids(sc.id).length;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();var nx=rows[i+(e.key==='ArrowDown'?1:-1)];if(nx)nx.querySelector('.sbgo').focus()}
+  else if(e.key==='ArrowRight'&&kids){e.preventDefault();if(sc.fold){delete sc.fold;save();renderTabs();focusRow(sc.id)}else if(rows[i+1])rows[i+1].querySelector('.sbgo').focus()}
+  else if(e.key==='ArrowLeft'){e.preventDefault();if(kids&&!sc.fold){sc.fold=true;save();renderTabs();focusRow(sc.id)}else if(sc.parent)focusRow(sc.parent)}
+  else if(e.key==='F2'){e.preventDefault();secRename(sc,go,true)}
+});
+sbBtn.addEventListener('click',function(){setSidebar(!sbOpen)});
+document.getElementById('sbX').addEventListener('click',function(){setSidebar(false)});
+document.getElementById('sbNew').addEventListener('click',function(){openTemplates(null)});
+// click anywhere else (or Escape) and it slides away
+document.addEventListener('pointerdown',function(e){if(sbOpen&&!sbEl.contains(e.target)&&!sbBtn.contains(e.target))setSidebar(false)},true);
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&sbOpen&&!document.querySelector('.pop')&&!(e.target.classList&&e.target.classList.contains('sbin'))){e.stopPropagation();setSidebar(false)}},true);
 
 // ---- add photos, videos and photobooth strips (originals are copied into <folder>/photos) ----
 var stripFileEl=document.getElementById('stripFile');
@@ -1409,7 +1504,7 @@ async function addFiles(list,stripOnly){
 }
 
 // ---- settings panel ----
-var VERSION='v1.7.0';
+var VERSION='v1.8.0';
 var gearBtn=document.getElementById('gear'),setEl=document.getElementById('set'),setMain=document.getElementById('setMain'),setStore=document.getElementById('setStore'),
     sndOn=document.getElementById('sndOn'),volEl=document.getElementById('vol'),volN=document.getElementById('volN'),secList=document.getElementById('secList');
 document.getElementById('about').textContent='About · Corkboard '+VERSION;
@@ -1478,7 +1573,9 @@ function customAuto(key){var v=customVars(Object.assign({},data.custom,{text:'au
 var wallUrl='';
 // v1.7: a section can have a theme of its own (sections[].theme); otherwise it uses the board's (data.theme)
 function curSection(){return data.sections.filter(function(s){return s.id===data.cur})[0]||null}
-function curTheme(){var sc=curSection();return sc&&sc.theme&&THEMES.some(function(t){return t.id===sc.theme})?sc.theme:data.theme}
+// v1.8: a section without one uses the theme of the section it sits in (and so on up)
+function themeOwner(){var p=secPathOf(curSection());for(var i=p.length-1;i>=0;i--){var t=p[i].theme;if(t&&THEMES.some(function(x){return x.id===t}))return p[i]}return null}
+function curTheme(){var o=themeOwner();return o?o.theme:data.theme}
 function applyTheme(id){
   var r=document.documentElement,s=r.style;
   r.setAttribute('data-theme',id);
@@ -1498,12 +1595,12 @@ function paintCustomSwatch(sw){
 function renderThemes(){
   var box=document.getElementById('thmList');box.innerHTML='';
   // v1.7: "Different theme for this section"
-  var sc=curSection(),own=!!(sc&&sc.theme),sb=document.getElementById('secThm');
+  var sc=curSection(),own=!!(sc&&sc.theme),ow=themeOwner(),sb=document.getElementById('secThm');
   if(sb&&sc){sb.innerHTML='';var lb=document.createElement('label');lb.className='trow';var tx=document.createElement('span');tx.textContent='Different theme for \u201c'+sc.name+'\u201d';
     var sw=document.createElement('input');sw.type='checkbox';sw.className='sw';sw.checked=own;
     sw.addEventListener('change',function(){if(sw.checked)sc.theme=curTheme();else delete sc.theme;applyTheme(curTheme());save();sfx.blip();renderThemes()});
     lb.appendChild(tx);lb.appendChild(sw);sb.appendChild(lb);
-    var hn=document.createElement('p');hn.className='shint2';hn.textContent=own?'The theme you pick applies to this section only.':'The theme you pick applies to the whole board.';sb.appendChild(hn)}
+    var hn=document.createElement('p');hn.className='shint2';hn.textContent=own?'The theme you pick applies to this section'+(secKids(sc.id).length?' and the sections inside it.':' only.'):ow?'The theme you pick applies to \u201c'+ow.name+'\u201d and the sections inside it.':'The theme you pick applies to the whole board.';sb.appendChild(hn)}
   THEMES.forEach(function(t){
     var on=t.id===curTheme(),b=document.createElement('button');
     b.className='thm'+(on?' on':'');b.dataset.id=t.id;b.setAttribute('role','radio');b.setAttribute('aria-checked',on?'true':'false');
@@ -1512,7 +1609,7 @@ function renderThemes(){
     b.appendChild(sw);b.appendChild(nm);
     b.addEventListener('click',function(){
       if(curTheme()===t.id)return;
-      if(own)sc.theme=t.id;else data.theme=t.id;applyTheme(curTheme());save();sfx.blip();renderThemes();
+      if(own)sc.theme=t.id;else if(ow)ow.theme=t.id;else data.theme=t.id;applyTheme(curTheme());save();sfx.blip();renderThemes();
     });
     box.appendChild(b);
   });
@@ -1695,9 +1792,9 @@ volEl.addEventListener('change',function(){sfx.sample()});
 // sections list
 function renderSecList(){
   secList.innerHTML='';
-  data.sections.forEach(function(sc){
+  secOrder().forEach(function(o){var sc=o.sc; // v1.8: in sidebar order, sub-sections indented
     var ph=0,sp=0,vd=0,sk=0,dc=0,n=data.notes.filter(function(q){return q.s===sc.id&&!q.kind}).length,cl=data.notes.filter(function(q){return q.s===sc.id&&q.kind==='cal'}).length,ix=data.notes.filter(function(q){return q.s===sc.id&&q.kind==='idx'}).length,td=data.notes.filter(function(q){return q.s===sc.id&&q.kind==='todo'}).length,lb=data.labels.filter(function(q){return q.s===sc.id}).length;data.photos.forEach(function(p){if(p.s!==sc.id)return;if(p.kind==='video')vd++;else if(p.kind==='strip')sp++;else if(p.kind==='sticker')sk++;else if(p.kind==='doc')dc++;else ph++});
-    var row=document.createElement('div');row.className='srow'+(sc.id===data.cur?' on':'');
+    var row=document.createElement('div');row.className='srow'+(sc.id===data.cur?' on':'');if(o.d)row.style.marginLeft=Math.min(o.d,6)*18+'px';
     var go=document.createElement('button');go.className='sgo';go.title='Go to this section';
     if(sc.id===data.cur)go.setAttribute('aria-current','true');
     var nm=document.createElement('span');nm.className='snm';nm.textContent=sc.name;
@@ -1711,10 +1808,10 @@ function renderSecList(){
     var rn=document.createElement('button');rn.className='rbtn';rn.textContent='\u270e';rn.title='Rename';rn.setAttribute('aria-label','Rename '+sc.name);
     rn.addEventListener('click',function(){rowRename(sc,go)});
     row.appendChild(rn);
-    if(data.sections.length>1){
+    if(canDelete(sc.id)){
       var x=document.createElement('button');x.className='rbtn x';x.textContent='\u00d7';x.title='Delete this section';x.setAttribute('aria-label','Delete '+sc.name);
       row.appendChild(x);
-      armDel(x,'Delete section & its contents?',function(){deleteSection(sc.id)});
+      armDel(x,delLabel(sc.id),function(){deleteSection(sc.id)});
     }
     secList.appendChild(row);
   });
@@ -1771,7 +1868,7 @@ titleEl.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefa
 // ---- v1.4: zoom out (never further in than 100%). The cards sit in #layer, which is scaled from just under the tabs. ----
 var ZM=1,Z_MIN=.35,Z_ORG=150,layer=document.getElementById('layer'),zmOut=document.getElementById('zmOut'),zmIn=document.getElementById('zmIn'),zmN=document.getElementById('zmN');
 // zoom from just below the section tabs (they can wrap onto several rows on a phone)
-function zOrg(){var h=document.querySelector('header');Z_ORG=Math.max(150,(h?h.offsetHeight:0)+tabsEl.offsetHeight+12);layer.style.transformOrigin='50% '+Z_ORG+'px';return Z_ORG}
+function zOrg(){var h=document.querySelector('header');Z_ORG=Math.max(150,(h?h.offsetHeight:0)+12);layer.style.transformOrigin='50% '+Z_ORG+'px';return Z_ORG}
 function setZoom(z,clientY){
   zOrg();z=Math.max(Z_MIN,Math.min(1,Math.round(z*100)/100));if(z===ZM)return;
   var py=clientY==null?null:clientY+window.scrollY,ly=py==null?0:Z_ORG+(py-Z_ORG)/ZM;
@@ -1858,9 +1955,12 @@ function instantiate(items,sid){
     else if(it.k==='sticker'){if(!libFiles[o.file])return;o.id='k'+uid();files[o.id]=libFiles[o.file];data.photos.push(o)}
   });
 }
-var tplEl=document.getElementById('tpl'),tplPick='blank',tplNamed=false;
-function openTemplates(){
-  if(!dir)return;closePop();tplPick='blank';tplNamed=false;var nm=document.getElementById('tplName');nm.value='';nm.placeholder='New section';
+var tplEl=document.getElementById('tpl'),tplPick='blank',tplNamed=false,tplParent=null;
+function openTemplates(pid){
+  if(!dir)return;closePop();setSidebar(false);tplPick='blank';tplNamed=false;var nm=document.getElementById('tplName');nm.value='';nm.placeholder='New section';
+  // v1.8: from a section's + in the sidebar, the new one goes inside it
+  var ps=typeof pid==='string'?secById(pid):null;tplParent=ps?ps.id:null;
+  document.getElementById('tplT').textContent=ps?'New section inside \u201c'+ps.name+'\u201d':'New section';
   renderTpl();tplEl.style.display='flex';sfx.blip();setTimeout(function(){nm.focus()},30);
 }
 function closeTpl(){tplEl.style.display='none'}
@@ -1898,6 +1998,7 @@ function renderTpl(){
 function create(){
   var t=TEMPLATES.concat(data.templates).filter(function(x){return x.id===tplPick})[0]||TEMPLATES[0],nm=document.getElementById('tplName');
   var name=(nm.value.trim()||(t.id==='blank'?'New section':t.name)).slice(0,24),sc={id:'s'+uid(),name:name};
+  var ps=tplParent&&secById(tplParent);if(ps)sc.parent=ps.id; // v1.8
   data.sections.push(sc);data.cur=sc.id;instantiate(t.items,sc.id);closeTpl();sfx.chime2();save();renderSection();
 }
 document.getElementById('tplName').addEventListener('input',function(){tplNamed=!!this.value.trim()});
@@ -1911,7 +2012,7 @@ document.getElementById('tplSave').addEventListener('click',function(){
 });
 (function(){var down=false;tplEl.addEventListener('pointerdown',function(e){down=e.target===tplEl});tplEl.addEventListener('click',function(e){if(e.target===tplEl&&down)closeTpl()})})();
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&tplEl.style.display==='flex')closeTpl()});
-document.getElementById('tplBtn').addEventListener('click',function(){closeSettings();setTimeout(openTemplates,60)});
+document.getElementById('tplBtn').addEventListener('click',function(){closeSettings();setTimeout(function(){openTemplates(null)},60)});
 document.getElementById('cardBtn').addEventListener('click',function(){
   var n=Object.assign({id:'n'+uid(),s:data.cur,kind:'idx',text:'',c:IDX_COLS[0]},slot());n.rot=Math.round(n.rot*4)/10;
   data.notes.push(n);renderNote(n);sfx.pop();sfx.land(.4);save();fit();
@@ -2077,7 +2178,7 @@ window.addEventListener('wheel',function(e){
 (function(){var on=null,sx=0,sy=0,p0=0,moved=false;
   board.addEventListener('pointerdown',function(e){
     if(e.button||on!==null||panMax()<1)return;var t=e.target;
-    if(t.closest&&t.closest('.card,#tabs,header,.edge,input,button,textarea,[contenteditable="true"]'))return;
+    if(t.closest&&t.closest('.card,header,.edge,input,button,textarea,[contenteditable="true"]'))return;
     on=e.pointerId;sx=e.clientX;sy=e.clientY;p0=PAN;moved=false;
   });
   window.addEventListener('pointermove',function(e){
@@ -2239,7 +2340,7 @@ function yarnPop(g,y){openPop(g.childNodes[3],function(box,close){
   rm.addEventListener('click',function(){close();data.yarns=data.yarns.filter(function(q){return q!==y});sfx.trash();save();yarnDraw()});row.appendChild(rm);box.appendChild(row);
 })}
 // yarn tool: tap the board or a card to put in a pin; drag from a pin to tie yarn
-function overUI(x,y){var t=document.elementFromPoint(x,y);return !!(t&&t.closest&&t.closest('#tabs,header,.fab,.lfab,.shelf,.pop,#ytools,.edge,#set,#tpl,#fx,#ask,#rd,#lb,#start'))}
+function overUI(x,y){var t=document.elementFromPoint(x,y);return !!(t&&t.closest&&t.closest('#sb,#sbBtn,header,.fab,.lfab,.shelf,.pop,#ytools,.edge,#set,#tpl,#fx,#ask,#rd,#lb,#start'))}
 function setYarnMode(on){yMode=on;document.body.classList.toggle('ymode',on);yBtn.classList.toggle('on',on);yBtn.setAttribute('aria-pressed',on?'true':'false');yTools.hidden=!on;if(on){clearSel();closePop();ySync()}sfx.blip()}
 function ySync(){var r=yTools.querySelector('.yswr');if(r)r.remove();swatchRow(yTools.querySelector('.ytc'),yCol,function(c){yCol=c;data.yarnCol=c;save()})}
 yBtn.addEventListener('click',function(){setYarnMode(!yMode)});
@@ -2287,6 +2388,7 @@ async function mount(h){
     // upgrade boards saved by older versions (no sections / notes / volume yet)
     if(!data.photos)data.photos=[];if(!data.notes)data.notes=[];
     if(!data.sections||!data.sections.length)data.sections=[{id:'s1',name:'Our memories'}];
+    cleanSecTree(); // v1.8
     data.photos.forEach(function(p){if(!p.s)p.s=data.sections[0].id});
     if(!data.sections.some(function(s){return s.id===data.cur}))data.cur=data.sections[0].id;
     titleEl.textContent=data.title||'Corkboard';
@@ -2340,7 +2442,7 @@ async function mount(h){
     volume=(typeof data.volume==='number'&&isFinite(data.volume))?Math.max(0,Math.min(1,data.volume)):.8;data.volume=volume;applyVolume();
     data.dangle=data.dangle!==false;delete data.keys;data.style=cleanStyle(data.style);applyStyle();data.custom=cleanCustom(data.custom);data.theme=THEMES.some(function(t){return t.id===data.theme})?data.theme:'classic';data.sections.forEach(function(sc){if(sc.theme&&!THEMES.some(function(t){return t.id===sc.theme}))delete sc.theme});applyTheme(curTheme());
     var zz=+data.zoom;ZM=1;setZoom(isFinite(zz)?zz:1);if(ZM===1)delete data.zoom;
-    gearBtn.style.display='inline-flex';document.getElementById('lfab').style.display='';shelfEl.style.display='';renderShelf();ySvg.style.display='';yarnClean();fab.style.display='';startEl.remove();closeSettings();renderSection();rememberHandle(h);
+    gearBtn.style.display='inline-flex';document.getElementById('lfab').style.display='';sbBtn.style.display='';setSidebar(false);shelfEl.style.display='';renderShelf();ySvg.style.display='';yarnClean();fab.style.display='';startEl.remove();closeSettings();renderSection();rememberHandle(h);
   }catch(e){toast('Couldn\u2019t open that folder')}
 }
 function button(label,alt,fn){var b=document.createElement('button');b.className='btn'+(alt?' alt':'');b.textContent=label;b.addEventListener('click',fn);document.getElementById('btns').appendChild(b)}
@@ -2381,8 +2483,6 @@ document.addEventListener('keydown',function(e){
   if(!m.contains(document.activeElement)){e.preventDefault();a.focus();return}
   if(e.shiftKey&&document.activeElement===a){e.preventDefault();z.focus()}else if(!e.shiftKey&&document.activeElement===z){e.preventDefault();a.focus()}
 });
-function stick(){tabsEl.classList.toggle('stuck',window.scrollY>0&&tabsEl.getBoundingClientRect().top<=1)}
-window.addEventListener('scroll',stick,{passive:true});window.addEventListener('resize',stick);
 var rsT=0;
 window.addEventListener('resize',function(){clearTimeout(rsT);rsT=setTimeout(function(){
   var W=board.clientWidth;for(var k in cards){var e=cards[k],q=e._p;if(!q||e.classList.contains('drag'))continue;e.style.left=clampX(q.x*W)+'px';keepIn(e)}fit();
@@ -2396,6 +2496,7 @@ if(window.corkNative)window.__cork={
   toast:toast,
   warn:function(){sfx.warn()},
   hasBoard:function(){return !!dir},
+  sections:function(){setSidebar(!sbOpen)},
   warmSound:function(){try{sfx.warm()}catch(e){}}
 };
 })();

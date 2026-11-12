@@ -45,7 +45,12 @@ xattr -dr com.apple.quarantine /Applications/Corkboard.app
   - Drag the **bottom edge** of a note, card or calendar to make it longer or shorter; double-click the edge to reset.
 - **Stacks:** drop a sticky note, to-do list or index card onto another to stack them. The stack button (**Spread out to look**, **Stack again**, **Unstack for good**) lays the cards out and gathers them back. Pins on stacked cards show as one pin on the stack.
 - **To-do lists:** press ⌘A twice to select the whole list, then ⌘C copies it, Delete clears it, and pasting several lines adds one item per line.
-- **Themes:** Settings → Theme → **Different theme for this section** gives the section you're looking at its own theme.
+- **Sections:** the button at the top left (or **⌘\\**) opens the sections sidebar. Click a section to go to it.
+  - **+ New section** at the bottom adds one. The **+** on a section's row adds a section inside it, and those can have sections inside them too.
+  - Drag a section onto another to put it inside, or between two to move it. The arrow next to a section hides or shows what's inside.
+  - Double-click a name (or use ✎) to rename it. **×** deletes a section, together with everything inside it.
+- **Toolbar:** Settings, pins and yarn, and zoom are at the top right.
+- **Themes:** Settings → Theme → **Different theme for this section** gives the section you're looking at its own theme. Sections inside it use that theme too, unless they have their own.
 
 ## Updates
 

@@ -762,3 +762,56 @@ body.panning,body.panning *{cursor:grabbing!important;user-select:none}
 /* to-do list: everything selected (⌘A twice) */
 .tdl.tdall .tdt{background:rgba(70,120,220,.22);border-radius:3px}
 .tdl.tdall .tdt::selection{background:transparent}
+/* v1.8: the toolbar (settings, yarn, zoom) sits at the top right; sections live in a sidebar opened from the top left */
+.lfab{left:auto!important;bottom:auto!important;right:18px;top:18px}
+.sub:empty{display:none}
+.sbtog{position:fixed;left:18px;top:18px;z-index:62;display:inline-flex;align-items:center;gap:9px;height:48px;max-width:min(34vw,300px);padding:0 18px 0 13px;border:0;border-radius:999px;background:var(--soft);color:var(--ink);font:inherit;font-size:14px;font-weight:600;box-shadow:0 6px 16px rgba(0,0,0,.35);cursor:pointer;transition:background .15s,opacity .2s,transform .2s}
+.sbtog:hover{background:#fff}
+.sbtog:focus-visible{outline:2px solid var(--btn);outline-offset:2px}
+.sbtog svg{flex:none;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sbtog span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.sbopen .sbtog{opacity:0;pointer-events:none;transform:translateX(-8px)}
+.sb{position:fixed;left:0;top:0;bottom:0;z-index:63;width:300px;max-width:86vw;display:flex;flex-direction:column;background:var(--soft);color:var(--ink);border-radius:0 18px 18px 0;box-shadow:10px 0 34px rgba(0,0,0,.35);
+transform:translateX(-104%);visibility:hidden;transition:transform .28s cubic-bezier(.3,1,.4,1),visibility 0s .28s}
+.sb.open{transform:none;visibility:visible;transition:transform .28s cubic-bezier(.3,1,.4,1)}
+.sbhd{display:flex;align-items:center;justify-content:space-between;padding:20px 14px 10px 22px}
+.sbhd b{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#8a7c6a}
+.sbx{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:none;color:var(--ink);cursor:pointer}
+.sbx:hover{background:rgba(59,54,49,.1)}
+.sbx svg,.sbcar svg,.sbact svg,.sbnew svg{fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+.sbx svg{width:20px;height:20px}
+.sbtree{flex:1;overflow:auto;padding:2px 10px 14px;position:relative}
+.sbtree.dend{box-shadow:inset 0 -3px 0 var(--btn)}
+.sbr{position:relative;display:flex;align-items:center;min-height:38px;margin:1px 0;padding-left:calc(var(--d,0) * 18px);border-radius:10px;transition:background .12s}
+.sbr:hover{background:rgba(59,54,49,.07)}
+.sbr.on{background:var(--btn);color:var(--btn-ink)}
+.sbr.dragging{opacity:.4}
+.sbr.dinto{box-shadow:inset 0 0 0 2px var(--btn);background:rgba(59,54,49,.08)}
+.sbr.dbefore::before,.sbr.dafter::after{content:"";position:absolute;left:calc(var(--d,0) * 18px + 24px);right:8px;height:3px;border-radius:2px;background:var(--btn);pointer-events:none}
+.sbr.dbefore::before{top:-2px}.sbr.dafter::after{bottom:-2px}
+.sbcar,.sbsp{flex:none;width:24px;height:30px}
+.sbcar{display:inline-flex;align-items:center;justify-content:center;border:0;padding:0;background:none;color:inherit;opacity:.6;cursor:pointer;border-radius:6px}
+.sbcar:hover{opacity:1}
+.sbcar svg{width:14px;height:14px;transition:transform .18s}
+.sbcar.open svg{transform:rotate(90deg)}
+.sbgo{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:38px;padding:0 8px 0 4px;border:0;background:none;color:inherit;font:inherit;font-size:14px;font-weight:500;text-align:left;cursor:pointer;border-radius:8px}
+.sbgo:focus-visible{outline:2px solid var(--btn);outline-offset:-2px}
+.sbr.on .sbgo{font-weight:600}.sbr.on .sbgo:focus-visible{outline-color:var(--btn-ink)}
+.sbn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sbc{flex:none;font-size:12px;opacity:.55;font-variant-numeric:tabular-nums}
+.sbact{display:none;align-items:center;gap:1px;padding-right:5px}
+.sbr:hover .sbact,.sbr:focus-within .sbact{display:flex}
+.sbr:hover .sbc,.sbr:focus-within .sbc{display:none}
+.sbact button{width:27px;height:27px;display:inline-flex;align-items:center;justify-content:center;padding:0;border:0;border-radius:7px;background:none;color:inherit;font:inherit;font-size:17px;line-height:1;cursor:pointer}
+.sbact button:hover{background:rgba(59,54,49,.13)}
+.sbr.on .sbact button:hover{background:rgba(255,255,255,.18)}
+.sbact svg{width:15px;height:15px}
+.sbact button.armed{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:auto;padding:0 11px;background:#8a3b2e;color:#fff;font-size:12.5px;font-weight:600;white-space:nowrap;z-index:2}
+.sbin{flex:1;min-width:0;height:30px;margin:4px 6px 4px 0;padding:0 8px;font:inherit;font-size:14px;color:var(--ink);background:#fff;border:1.5px solid var(--btn);border-radius:7px;outline:none}
+.sbnew{display:flex;align-items:center;gap:8px;margin:4px 14px 8px;height:42px;padding:0 14px;border:1.5px dashed rgba(59,54,49,.35);border-radius:11px;background:none;color:var(--ink);font:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s}
+.sbnew:hover{background:rgba(59,54,49,.07);border-color:rgba(59,54,49,.6)}
+.sbnew:focus-visible{outline:2px solid var(--btn);outline-offset:2px}
+.sbnew svg{width:17px;height:17px}
+.sbtip{margin:0 20px 18px;font-size:12px;line-height:1.45;color:#8a7c6a}
+@media (max-width:640px){.lfab{right:12px;top:12px}.sbtog{left:12px;top:12px;height:42px;max-width:40vw}}
+@media (prefers-reduced-motion:reduce){.sb,.sb.open{transition:none}}

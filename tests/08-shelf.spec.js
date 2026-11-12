@@ -40,7 +40,7 @@ test('shelf: carry cards between sections', async () => {
     await h.expect(page.locator('#shN')).toHaveText('4');
 
     // another section: open the shelf, drag one out
-    await page.locator('#tabs .tab', { hasText: 'Two' }).click(); await page.waitForTimeout(600);
+    await h.goSection(page, 'Two'); await page.waitForTimeout(600);
     await page.click('#shBtn');
     await h.expect(page.locator('#shG .shi')).toHaveCount(4);
     const t1 = await page.locator('#shG .shi').first().boundingBox();

@@ -7,9 +7,9 @@ const kinds = cs => { const o = {}; cs.forEach(c => { const k = /\bidx\b/.test(c
 test('built-in and own templates', async () => {
   const ctx = h.newBoard(); const page = await h.launch(ctx);
   try {
-    const curTab = () => page.textContent('#tabs .tab.on');
+    const curTab = () => h.curSection(page);
     // Date ideas: a pile of 6 idea cards, 2 labels, a to-do list and a note
-    await page.click('#tabs .tab.add');
+    await h.newSection(page);
     await h.expect(page.locator('#tpl')).toBeVisible();
     await page.locator('#tplG .tplt', { hasText: 'Date ideas' }).click();
     h.expect(await page.getAttribute('#tplName', 'placeholder')).toBe('Date ideas');
@@ -21,7 +21,7 @@ test('built-in and own templates', async () => {
     h.expect(kinds(cs)).toEqual({ label: 2, idx: 6, todo: 1, note: 1 });
     h.expect(await page.locator('.card.idx.ptop .pcount').textContent()).toBe('6 cards');
     // Week planner, created straight away by double-clicking its tile, with a name of her own
-    await page.click('#tabs .tab.add');
+    await h.newSection(page);
     await page.fill('#tplName', 'This week');
     await page.locator('#tplG .tplt', { hasText: 'Week planner' }).dblclick();
     await page.waitForTimeout(900);
@@ -53,7 +53,7 @@ test('built-in and own templates', async () => {
     h.expect(kinds(await h.cards(page))).toEqual({ label: 2, idx: 7, todo: 1 });
     h.expect(await page.$$eval('.card.idx .ixe', a => a.map(e => e.textContent.trim()))).toContain('Monday gym');
     // delete it (two taps)
-    await page.click('#tabs .tab.add');
+    await h.newSection(page);
     await page.click('#tplM .tplx:not(.rn)');
     await h.expect(page.locator('#tplM .tplx:not(.rn)')).toHaveText('Delete?');
     await page.click('#tplM .tplx:not(.rn)');

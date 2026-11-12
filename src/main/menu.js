@@ -36,6 +36,9 @@ function build(o) {
   ] });
   const zoom = (name, label, acc, extra) => Object.assign({ label, accelerator: acc, enabled: o.hasBoard, click: () => o.send('menu', name) }, extra || {});
   const view = [
+    // v1.8: the sections sidebar
+    { label: 'Show Sections', accelerator: 'CmdOrCtrl+\\', enabled: o.hasBoard, click: () => o.send('menu', 'sections') },
+    { type: 'separator' },
     zoom('zoomOut', 'Zoom Out', 'CmdOrCtrl+-'),
     zoom('zoomIn', 'Zoom In', 'CmdOrCtrl+='),
     // the same shortcut typed with Shift (Cmd/Ctrl +) and the numpad keys, without extra menu entries

@@ -78,7 +78,7 @@ test('a board saved by the app opens in the web version, and back', async () => 
     await h.drag(page, { x: pb.x + pb.width / 2, y: pb.y + pb.height / 2 }, { x: 1100, y: 650 });
     await page.click('#yDone');
     // a second section from a template (index card pile, to-do list, calendar-free)
-    await page.click('#tabs .tab.add'); await page.locator('#tplG .tplt', { hasText: 'Date ideas' }).click(); await page.click('#tplOk');
+    await h.newSection(page); await page.locator('#tplG .tplt', { hasText: 'Date ideas' }).click(); await page.click('#tplOk');
     await page.waitForTimeout(800);
     await page.click('#gear'); await page.click('#tb-theme'); await page.locator('#thmList .thm', { hasText: 'Blush' }).click(); await page.click('#setX');
     const appSaved = await h.saved(ctx, d => d.theme === 'blush' && d.yarns.length === 1 && d.sections.length === 2);
@@ -126,7 +126,7 @@ test('a board saved by the app opens in the web version, and back', async () => 
     fs.writeFileSync(path.join(ctx2.userData, 'config.json'), JSON.stringify({ recent: [fs.realpathSync(ctx.back)] })); // the app's last board
     page = await h.launch(ctx2);
     try {
-      h.expect(await page.textContent('#tabs .tab.on')).toBe(appSaved.sections[1].name);
+      h.expect(await h.curSection(page)).toBe(appSaved.sections[1].name);
       h.expect(await page.locator('#layer .card').count()).toBe(want[appSaved.sections[1].name]);
       h.expect(ctx2.errors).toEqual([]);
     } finally { await h.close(ctx2); }

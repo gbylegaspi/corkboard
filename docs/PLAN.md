@@ -1,6 +1,16 @@
 # Corkboard desktop: plan
 
-Status (2026-11-12): **Phases 1–4 done for macOS.** `npm test` runs 23 Electron tests and passes against the source and against the installed universal `.dmg` build, including macOS behaviour (Dock, ⌘Q saving, password-protected PDFs, sound without a click). `npm run build:mac` makes `dist/Corkboard-1.6.3-mac-universal.dmg` (229 MB, ad-hoc signed, Apple Silicon and Intel). The Windows configuration is written but not built or tested; that waits until you ask.
+Status (2026-11-12): **Phases 1–4 done for macOS.** `npm test` runs 24 Electron tests and passes against the source and against the installed universal `.dmg` build, including macOS behaviour (Dock, ⌘Q saving, password-protected PDFs, sound without a click). `npm run build:mac` makes `dist/Corkboard-1.6.3-mac-universal.dmg` (229 MB, ad-hoc signed, Apple Silicon and Intel). The Windows configuration is written but not built or tested; that waits until you ask.
+
+**Version 1.6.4:** adds Help → Check for Updates… (asks GitHub's latest-release API only when clicked, and offers to open the download page; nothing downloads or installs by itself). It also makes dragging smoother and removes the dark placeholder flash:
+- The sound engine is set up in idle time instead of on the first drag. On a 6× slowed CPU that first drag's freeze went from 175 ms to 24 ms.
+- The yarn overlay measures the board once per frame instead of once per pin.
+- The edge badges recount a few times a second during a drag instead of every frame.
+- Cards get their GPU layer on hover.
+- Card photos are decoded before they're drawn.
+- The empty-photo placeholder is a paper tone instead of near-black.
+
+`npm test` now runs 24 tests.
 
 **Found while testing, fixed in the app only (the web file still has it):** double-clicking the month name on a calendar never jumps back to today. The card captures the pointer when it's pressed (to start a drag), so the double-click is delivered to the card, not to the month name. The app now listens for the double-click on the card and checks it was on the month name; test 4 uses a real double-click.
 

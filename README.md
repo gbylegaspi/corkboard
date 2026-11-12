@@ -4,14 +4,14 @@ Corkboard is a cosy board for photos, videos, PDFs, notes, to-do lists, calendar
 
 ## Download
 
-**[Download Corkboard for Mac](https://github.com/gbylegaspi/corkboard/releases/latest)** (`Corkboard-1.6.3-mac-universal.dmg`)
+**[Download Corkboard for Mac](https://github.com/gbylegaspi/corkboard/releases/latest)** (the `.dmg` file under Assets)
 
 - Works on Apple Silicon and Intel Macs, with macOS 12 or later.
 - There's nothing else to install.
 
 ## Install
 
-1. Open `Corkboard-1.6.3-mac-universal.dmg`.
+1. Open the downloaded `Corkboard-…-mac-universal.dmg`.
 2. Drag **Corkboard** into **Applications**.
 3. Open Corkboard from Applications.
 
@@ -39,6 +39,12 @@ xattr -dr com.apple.quarantine /Applications/Corkboard.app
 - **Seeing your files:** **File → Show Board Folder in Finder**.
 - **More boards:** **File → Open Board Folder…** opens another board folder, and **File → Recent Boards** switches between them.
 
+## Updates
+
+Choose **Help → Check for Updates…** (or **Corkboard → Check for Updates…**). Corkboard asks GitHub whether there's a newer version. This is the only time the app goes online, and only when you choose it.
+
+If there's a newer version, click **Download…** to open its page. Open the new `.dmg`, drag Corkboard into Applications, and choose **Replace**. Your board and photos aren't touched, because they're stored outside the app. The first time you open the new version, you may need to click **Open Anyway** again (see Install).
+
 ## Where everything is stored
 
 Your board is a normal folder on your Mac:
@@ -48,7 +54,7 @@ Your board is a normal folder on your Mac:
 - **`thumbs/`** holds smaller copies so the board stays fast. They're safe to delete and are made again when needed.
 - **`board.json`** holds the layout, notes, lists, calendars, pins and settings.
 
-Back up the whole folder to keep everything safe. Removing the app doesn't delete your board. Nothing is sent anywhere: the app makes no internet connections, and links you add to notes open in your web browser.
+Back up the whole folder to keep everything safe. Removing the app doesn't delete your board. Nothing is sent anywhere. The app only goes online when you choose Check for Updates, and links you add to notes open in your web browser.
 
 ## Web version
 

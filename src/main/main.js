@@ -10,6 +10,7 @@ const storage = require('./storage');
 const config = require('./config');
 const menu = require('./menu');
 const heic = require('./heic');
+const updates = require('./updates');
 
 const APP_ORIGIN = 'app://corkboard';
 const RENDERER = path.join(__dirname, '..', 'renderer');
@@ -129,7 +130,8 @@ function refreshMenu() {
     clearRecent: () => { const keep = current ? [storage.rootPath(current)] : []; config.clearRecent(); keep.forEach(config.addRecent); refreshMenu(); },
     showFolder: () => { if (current) shell.openPath(storage.rootPath(current)); },
     about: showAbout,
-    licences: () => shell.openPath(resource('THIRD_PARTY_LICENSES.txt'))
+    licences: () => shell.openPath(resource('THIRD_PARTY_LICENSES.txt')),
+    checkUpdates: () => updates.check(win)
   }));
 }
 async function openRecentFromMenu(p) {

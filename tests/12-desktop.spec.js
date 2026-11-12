@@ -53,7 +53,7 @@ test('menus, zoom mapping, recent boards, media, HEIC, drop, single instance, wi
     h.expect(await ctx.app.evaluate(() => global.__openedPaths)).toEqual([fs.realpathSync(ctx.board)]);
     await clickMenu(ctx.app, 'Help', 'About Corkboard');
     const about = (await ctx.app.evaluate(() => global.__boxes))[0].detail;
-    h.expect(about).toMatch(/Version 1\.6\.3/); h.expect(about).toMatch(/Apache/); h.expect(about).toMatch(/LGPL/);
+    h.expect(about).toContain("Version " + require("../package.json").version); h.expect(about).toMatch(/Apache/); h.expect(about).toMatch(/LGPL/);
 
     // HEIC: converted to JPEG, the original kept next to it, both deleted together
     await page.setInputFiles('#file', fx.heic());

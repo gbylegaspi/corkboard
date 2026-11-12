@@ -12,7 +12,7 @@ function build(o) {
   const fm = isMac ? 'Show Board Folder in Finder' : 'Show Board Folder in File Explorer';
   const tpl = [];
   if (isMac) tpl.push({ label: app.name, submenu: [
-    { label: 'About Corkboard', click: o.about }, { type: 'separator' },
+    { label: 'About Corkboard', click: o.about }, { label: 'Check for Updates…', click: o.checkUpdates }, { type: 'separator' },
     { role: 'services' }, { type: 'separator' },
     { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' },
     { role: 'quit', label: 'Quit Corkboard' }
@@ -45,7 +45,7 @@ function build(o) {
   if (!app.isPackaged) view.push({ type: 'separator' }, { role: 'reload' }, { role: 'toggleDevTools' });
   tpl.push({ label: 'View', submenu: view });
   if (isMac) tpl.push({ role: 'windowMenu' });
-  tpl.push({ role: 'help', label: 'Help', submenu: [{ label: 'About Corkboard', click: o.about }, { label: 'Third-Party Licences', click: o.licences }] });
+  tpl.push({ role: 'help', label: 'Help', submenu: [{ label: 'Check for Updates…', click: o.checkUpdates }, { type: 'separator' }, { label: 'About Corkboard', click: o.about }, { label: 'Third-Party Licences', click: o.licences }] });
   return Menu.buildFromTemplate(tpl);
 }
 

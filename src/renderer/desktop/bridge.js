@@ -9,6 +9,13 @@
     Promise.resolve().then(function () { return A.flush(); }).catch(function () {}).then(function () { N.flushed(); });
   });
 
+  // once a board is open, set the sound engine up in idle time, so the first sound (usually picking a card up) doesn't stall
+  var warmT = setInterval(function () {
+    if (!A.hasBoard()) return;
+    clearInterval(warmT);
+    (window.requestIdleCallback || function (f) { setTimeout(f, 300); })(function () { A.warmSound(); }, { timeout: 2000 });
+  }, 400);
+
   // iPhone photos (HEIC/HEIF) can't be shown by Chromium: turn each into a JPEG (the card's file, so the web version
   // can show it too) and remember the untouched original, which storeFile() keeps next to it in photos/
   function isHeic(f) { return /^image\/hei[cf]/i.test(f.type) || /\.(heic|heif)$/i.test(f.name); }

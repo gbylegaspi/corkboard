@@ -97,7 +97,9 @@ var sfx=(function(){
     glint:function(){bell(0,2349,.035,.7);bell(.07,3136,.025,.6)},
     chime:function(){[784,988,1175,1568].forEach(function(f,i){bell(i*.085,f,.065,1.5)})},
     chime2:function(){bell(0,880,.09,1.2);bell(.11,1319,.08,1.4)},
-    sample:function(){bell(0,988,.1,1.1)}
+    sample:function(){bell(0,988,.1,1.1)},
+    // perf: set the sound engine up ahead of time (the first sound otherwise builds its buffers mid-drag)
+    warm:function(){C()}
   };
 })();
 function applyVolume(){if(ac&&master)master.gain.setTargetAtTime(volume,ac.currentTime,.01)}
@@ -285,7 +287,7 @@ function dropThumbs(name){[TH_SM,TH_LG,TH_WALL].forEach(function(px){var k=name+
 // show a card image from its display copy, picking a bigger copy if the card is made bigger
 var thRO=window.ResizeObserver?new ResizeObserver(function(es){es.forEach(function(e){var im=e.target;if(im._th)im._th()})}):null;
 function bindImg(im,key,name,srcAr){
-  im.decoding='async';var tier=0;
+  im.decoding='sync';var tier=0; // app fix: decode before drawing, so a redrawn card never flashes its placeholder
   function need(){var w=im.clientWidth||200,h=im.clientHeight||w,da=w/h,sa=srcAr||da;return Math.max(w,h)*Math.min(2.5,window.devicePixelRatio||1)*Math.max(1,sa>da?sa/da:da/sa)}
   function pick(){
     var n=need(),t=n>TH_LG*1.1?-1:n>TH_SM*1.1?TH_LG:TH_SM;
@@ -1318,7 +1320,7 @@ async function addFiles(list,stripOnly){
 }
 
 // ---- settings panel ----
-var VERSION='v1.6.3';
+var VERSION='v1.6.4';
 var gearBtn=document.getElementById('gear'),setEl=document.getElementById('set'),setMain=document.getElementById('setMain'),setStore=document.getElementById('setStore'),
     sndOn=document.getElementById('sndOn'),volEl=document.getElementById('vol'),volN=document.getElementById('volN'),secList=document.getElementById('secList');
 document.getElementById('about').textContent='About · Corkboard '+VERSION;
@@ -1996,8 +1998,11 @@ function xMargin(){return(1/Z_MIN-1)/2*board.clientWidth}
 function clampX(px,w){var W=board.clientWidth,m=xMargin();return Math.max(-m,Math.min(px,W+m-(w||120)))}
 // little "‹ 2 more" badges at the screen edges when things are off to the side
 var edgeL=document.getElementById('edgeL'),edgeR=document.getElementById('edgeR');
+var edgesT=0;
 function edges(){
-  if(!edgeL)return;var l=0,r=0,vw=document.documentElement.clientWidth;
+  if(!edgeL)return;
+  // perf: while a card is being dragged, recount a few times a second rather than measuring every card every frame
+  var now=performance.now();if(document.body.classList.contains('cbdrag')&&now-edgesT<150)return;edgesT=now;var l=0,r=0,vw=document.documentElement.clientWidth;
   for(var k in cards){var b=cards[k].getBoundingClientRect();if(b.right<8)l++;else if(b.left>vw-8)r++}
   edgeL.hidden=!l;edgeR.hidden=!r;edgeL.querySelector('b').textContent=l;edgeR.querySelector('b').textContent=r;
 }
@@ -2018,8 +2023,10 @@ edgeL.addEventListener('dblclick',zoomToFit);edgeR.addEventListener('dblclick',z
 var YARN_COLS=['#d6264f','#2f6fd6','#2c9a5a','#f2c230','#ff8fb1','#8a4fd6','#e07b2a','#f7f3ea','#2a2622'];
 var ySvg=document.getElementById('yarn'),yG=ySvg.querySelector('.yg'),pG=ySvg.querySelector('.pg2'),tmpL=ySvg.querySelector('.ytmp'),yEls={},pEls={},yMode=false,yCol=YARN_COLS[0];
 var yBtn=document.getElementById('yarnBtn'),yTools=document.getElementById('ytools');
-function sx2(lx){var br=board.getBoundingClientRect(),W=board.clientWidth;return br.left+W/2+(lx-W/2-PAN)*ZM}
-function sy2(ly){var br=board.getBoundingClientRect();return br.top+Z_ORG+(ly-Z_ORG)*ZM}
+// perf: while the yarn is redrawn the board's position is measured once (yBR), not once per pin
+var yBR=null;
+function sx2(lx){var br=yBR||board.getBoundingClientRect(),W=board.clientWidth;return br.left+W/2+(lx-W/2-PAN)*ZM}
+function sy2(ly){var br=yBR||board.getBoundingClientRect();return br.top+Z_ORG+(ly-Z_ORG)*ZM}
 function toLogical(cx,cy){var br=board.getBoundingClientRect(),W=board.clientWidth;return{x:W/2+PAN+((cx-br.left)-W/2)/ZM,y:Z_ORG+((cy-br.top)-Z_ORG)/ZM}}
 function pinPos(p){
   if(p.card){var el=cards[p.card];if(!el||el.classList.contains('bye'))return null;return{x:sx2(el.offsetLeft+p.ox),y:sy2(el.offsetTop+p.oy)}}
@@ -2032,7 +2039,8 @@ function shade(hex,f){var n=parseInt(hex.slice(1),16),r=n>>16,g=n>>8&255,b=n&255
 function yPath(a,b){var dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy),sag=Math.min(46,d*.09)*Math.max(.5,ZM);return'M'+a.x.toFixed(1)+' '+a.y.toFixed(1)+' Q'+((a.x+b.x)/2).toFixed(1)+' '+((a.y+b.y)/2+sag).toFixed(1)+' '+b.x.toFixed(1)+' '+b.y.toFixed(1)}
 function yarnDraw(){
   if(!dir)return;var pos={},seen={},w=Math.max(1.6,2.6*Math.max(.55,ZM));
-  data.pins.forEach(function(p){var q=pinPos(p);if(q)pos[p.id]=q});
+  if(!data.pins.length&&!Object.keys(pEls).length)return; // perf: nothing to draw
+  yBR=board.getBoundingClientRect();try{data.pins.forEach(function(p){var q=pinPos(p);if(q)pos[p.id]=q})}finally{yBR=null}
   data.yarns.forEach(function(y){
     var a=pos[y.a],b=pos[y.b],g=yEls[y.id];if(!a||!b){if(g)g.style.display='none';return}
     if(!g){g=yEls[y.id]=sEl('g',{class:'yn'},yG);sEl('path',{class:'ysh'},g);sEl('path',{class:'ym'},g);sEl('path',{class:'ytx'},g);var h=sEl('path',{class:'yhit'},g);
@@ -2274,6 +2282,7 @@ if(window.corkNative)window.__cork={
   addFiles:function(list){if(!dir)return;return addFiles(list,false)},
   toast:toast,
   warn:function(){sfx.warn()},
-  hasBoard:function(){return !!dir}
+  hasBoard:function(){return !!dir},
+  warmSound:function(){try{sfx.warm()}catch(e){}}
 };
 })();

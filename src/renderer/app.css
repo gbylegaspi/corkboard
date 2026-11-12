@@ -70,7 +70,7 @@ rotate:var(--r,0deg);transition:box-shadow .2s,rotate .3s cubic-bezier(.3,1.5,.5
 .card:focus-visible{outline:2px solid var(--h1);outline-offset:5px}
 .card.drag{cursor:grabbing;rotate:var(--r,0deg);scale:1.08;box-shadow:0 18px 28px rgba(40,20,5,.5);transition:none}
 .card.bye{animation:bye .45s ease-in forwards;pointer-events:none}
-.card img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;background:#222;pointer-events:none;box-shadow:inset 0 0 6px rgba(0,0,0,.4)}
+.card img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;background:#d9cfc0;pointer-events:none;box-shadow:inset 0 0 6px rgba(0,0,0,.4)}
 .ph{position:relative;container-type:inline-size;--bs:clamp(22px,min((100cqi - 22px)/2,(100cqi / var(--ar,1) - 22px)/2),var(--bmax))}
 /* card buttons: sit inside the card's edges, revealed on hover (after the card settles) or keyboard focus */
 .card{--bi:6px;--bmax:32px}
@@ -229,7 +229,7 @@ transition:opacity .12s ease,visibility 0s linear .12s,scale .3s cubic-bezier(.3
 .strip{--bw:clamp(112px,28vw,150px);padding:calc(8px*var(--sc,1)) calc(8px*var(--sc,1)) calc(6px*var(--sc,1))}
 .strip .ph{--ar:.3}
 .sframes{display:flex;flex-direction:column;gap:calc(6px*var(--sc,1))}
-.sf{position:relative;isolation:isolate;overflow:hidden;aspect-ratio:5/4;background:#222}
+.sf{position:relative;isolation:isolate;overflow:hidden;aspect-ratio:5/4;background:#d9cfc0}
 .card .sf img{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto}
 .strip input{margin-top:6px;font-size:calc(13px*var(--sc,1))}
 .mini.stp{padding:4px 4px 9px;gap:3px}
@@ -721,3 +721,6 @@ body.panning,body.panning *{cursor:grabbing!important;user-select:none}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;animation-delay:0s!important;transition-duration:.01s!important}}
 /* app fix: a label's buttons go below it when the section tabs would cover them (see fitBar in app.js) */
 .card.label.lbdn .lbar{bottom:auto;top:calc(100% + 3px)}
+/* app fix (v1.6.4): a card gets its own GPU layer as soon as the pointer is over it, so starting a drag doesn't redraw it
+   (which could flash an empty placeholder and stutter); the empty-photo placeholder is a soft paper tone instead of near-black */
+@media (hover:hover){.card:hover{will-change:transform}}

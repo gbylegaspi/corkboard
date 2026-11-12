@@ -1,73 +1,59 @@
-# Corkboard (desktop)
+# Corkboard
 
-Corkboard is a cosy board for photos, videos, PDFs, notes, to-do lists, calendars, index cards, labels, stickers, pins and yarn. Everything is saved into **a folder she chooses**, and the app works fully offline.
+Corkboard is a cosy board for photos, videos, PDFs, notes, to-do lists, calendars, index cards, labels, stickers, pins and yarn. It works fully offline, and everything stays in a folder on your own computer.
 
-This is the desktop app for **macOS** (and, later, Windows). It's built with Electron from the web version, [`corkboard v1.6.3.html`](corkboard%20v1.6.3.html). Boards move freely between the two: the folder layout (`board.json`, `photos/`, `thumbs/`) and the `board.json` format are the same.
+## Download
+
+**[Download Corkboard for Mac](https://github.com/gbylegaspi/corkboard/releases/latest)** (`Corkboard-1.6.3-mac-universal.dmg`)
+
+- Works on Apple Silicon and Intel Macs, with macOS 12 or later.
+- There's nothing else to install.
+
+## Install
+
+1. Open `Corkboard-1.6.3-mac-universal.dmg`.
+2. Drag **Corkboard** into **Applications**.
+3. Open Corkboard from Applications.
+
+**The first time only:** Corkboard isn't signed with an Apple Developer ID, so macOS says it can't verify it.
+
+1. Click **Done** (not "Move to Bin").
+2. Open **System Settings → Privacy & Security**, scroll down to the message about Corkboard, and click **Open Anyway**.
+3. Confirm with your password or Touch ID.
+
+After that it opens normally. On macOS 14 and earlier you can instead right-click Corkboard in Applications, then choose **Open → Open**.
+
+If macOS says the app "is damaged", that's only the download's quarantine flag. Clear it once in Terminal:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Corkboard.app
+```
 
 ## Using it
 
-- **First launch:** nothing to set up. The app makes its own board folder and opens it:
-  - macOS: `~/Library/Application Support/Corkboard/My Board`
-  - Windows: `%APPDATA%\Corkboard\My Board`
+- **First launch:** nothing to set up. Corkboard makes its own board and opens it. Later launches go straight back to your board.
+- **Adding things:** drag photos, videos or PDFs from Finder onto the window, or use **+ Add** in the bottom-right corner.
+  - iPhone photos (HEIC) are turned into JPEGs, and the original is kept.
+  - iPhone videos play as they are.
+- **Zoom:** ⌘− and ⌘+ zoom the board out and back in (35–100%). ⌘0 returns to 100%.
+- **Seeing your files:** **File → Show Board Folder in Finder**.
+- **More boards:** **File → Open Board Folder…** opens another board folder, and **File → Recent Boards** switches between them.
 
-  If that folder is ever deleted, the next launch makes a fresh, empty one.
-- **Later launches** reopen the last board straight away.
-- **Other boards:** **File → Open Board Folder…** opens any other board folder, such as one the web version uses, and **File → Recent Boards** switches between them. If a folder she chose goes missing, the start screen says so and lets her choose it again.
-- **Uninstalling the app** doesn't delete the board folder.
-- **Show the files:** **File → Show Board Folder in Finder** (in Explorer on Windows), or Settings → Board → Show folder….
-- **Adding files:** drag photos, videos or PDFs from Finder onto the window, or use **+ Add**. iPhone HEIC photos are turned into JPEGs on import, and the original `.heic` is kept next to the JPEG in `photos/`.
-- **Zoom:** **View → Zoom In / Zoom Out / Actual Size** (⌘+ ⌘− ⌘0) zoom the board itself (35–100%), the same as the toolbar.
-- **Settings:** recent boards and the window size live in the app's own settings file, not in the board:
-  - macOS: `~/Library/Application Support/Corkboard/config.json`
-  - Windows: `%APPDATA%\Corkboard\config.json`
+## Where everything is stored
 
-Opening an unsigned build the first time: see [docs/SIGNING.md](docs/SIGNING.md#opening-an-unsigned-build).
+Your board is a normal folder on your Mac:
 
-## Developing
+- On first launch it's `~/Library/Application Support/Corkboard/My Board`.
+- **`photos/`** holds your original photos, videos, stickers and PDFs, copied in unchanged.
+- **`thumbs/`** holds smaller copies so the board stays fast. They're safe to delete and are made again when needed.
+- **`board.json`** holds the layout, notes, lists, calendars, pins and settings.
 
-You need **Node.js 22** (on this Mac: `brew install node@22`, then put `/opt/homebrew/opt/node@22/bin` on your `PATH`).
+Back up the whole folder to keep everything safe. Removing the app doesn't delete your board. Nothing is sent anywhere: the app makes no internet connections, and links you add to notes open in your web browser.
 
-```bash
-npm install
-```
+## Web version
 
-| Command | What it does |
-|---|---|
-| `npm run dev` | Runs the app from source |
-| `npm test` | Runs the Playwright tests against the source (23 tests, about 3 minutes; they open real app windows) |
-| `npm run build:mac` | Builds `dist/Corkboard-<version>-mac-universal.dmg` (Apple Silicon + Intel), unsigned (ad-hoc) |
-| `npm run build:win` | Builds the Windows NSIS installer and a portable `.exe` for x64 and arm64. Not built or tested yet; best run on a Windows PC |
-| `npm run icons` | Remakes `build/icon.icns`, `icon.ico` and `icon.png` from `build/icon.svg` (the `.icns` needs macOS) |
-
-To run the tests against a built app instead of the source:
-
-```bash
-CORK_APP_EXE="$PWD/dist/mac-universal/Corkboard.app/Contents/MacOS/Corkboard" npm test
-```
-
-`npm run dev`, `npm test` and the builds first run `scripts/vendor.js`. It copies pdf.js 6.2.108 and the Inter font from `node_modules` into `src/renderer/`, and writes `build/THIRD_PARTY_LICENSES.txt`. Nothing is loaded from the internet at runtime.
-
-## How it's put together
-
-```
-src/main/        main process: window, menus, app:// and cork-file:// protocols, board-folder access (storage.js),
-                 settings (config.js), HEIC conversion (heic.js + worker)
-src/preload/     the small API the page gets (window.corkNative)
-src/renderer/    the web app, split into index.html, app.css and app.js. app.js is the web code with a few changes,
-                 each marked "DESKTOP:" or "app fix:"
-  desktop/       fs-shim.js (the browser's folder API, backed by the main process), bridge.js (menus, drag and drop,
-                 saving on close), thumb-worker.js (display copies off the main thread)
-tests/           Playwright for Electron: one file per scenario, plus web-host/ for the round trip into the web version
-build/           icon source and generated icons, licences
-docs/            FEATURES.md (feature inventory), PLAN.md (plan, decisions, status), SIGNING.md
-```
-
-Safety:
-- The page runs sandboxed, with context isolation and a strict Content-Security-Policy.
-- File access is limited to the chosen board folder, and the main process rejects any path outside it.
-- `board.json` and every other file are written to a temporary file first and then renamed into place, so a crash can't leave a half-written board.
-- Links open in the default browser (http, https and mailto only), and any other network request is blocked.
+`corkboard v1.6.3.html` is the same board as a single web page, for Chrome or Edge on a computer. Boards move freely between the app and the web version: open the same folder in either one.
 
 ## Licences
 
-Corkboard uses pdf.js (Apache 2.0), Inter (SIL OFL 1.1), heic-convert / heic-decode (ISC), libheif-js (LGPL-3.0), jpeg-js (BSD-3-Clause), pngjs (MIT) and Electron/Chromium. The full texts ship with the app: **Help → Third-Party Licences**.
+Corkboard uses pdf.js (Apache 2.0), the Inter font (SIL OFL 1.1), heic-convert / heic-decode (ISC), libheif-js (LGPL-3.0), jpeg-js (BSD-3-Clause), pngjs (MIT) and Electron / Chromium. The full texts are in the app under **Help → Third-Party Licences**.

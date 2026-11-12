@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Corkboard</title>
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="fonts/inter/inter.css">
+</head>
+<body>
+<div id="board">
+  <header>
+    <h1 id="title" contenteditable="true" spellcheck="false">Corkboard</h1>
+    <div class="sub">double-click a section to rename it</div>
+  </header>
+  <nav id="tabs"></nav>
+  <div id="layer"></div>
+  <div class="empty" id="empty" style="display:none">Nothing here yet. Add photos, a PDF, a photobooth strip, a note or to-do list, a label or a sticker.</div>
+</div>
+<div class="fab" id="fab" style="display:none">
+  <button class="btn alt" id="cardBtn" title="Add an index card">+ Card</button>
+  <button class="btn alt" id="noteBtn">+ Note</button>
+  <button class="btn alt" id="labelBtn" title="Add a label you can write on">+ Label</button>
+  <button class="btn alt" id="stkBtn" title="Add stickers (PNG, WebP or GIF with a transparent background)">+ Sticker</button>
+  <button class="btn alt" id="stripBtn" title="Pick 4 photos to make a photobooth strip">+ <span class="lg">Photobooth</span><span class="sm">Strip</span></button>
+  <button class="btn" id="addBtn" title="Add photos, videos or PDF documents">+ Photos<span class="lg"> &amp; more</span></button>
+  <button class="btn addmain" id="addMain" aria-haspopup="menu" aria-expanded="false" title="Add something to the board"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add</span></button>
+</div>
+<input type="file" id="file" accept="image/*,video/*,application/pdf,.pdf,.docx,.doc" multiple hidden>
+<input type="file" id="stripFile" accept="image/*" multiple hidden>
+<input type="file" id="wallFile" accept="image/*" hidden>
+<input type="file" id="stkFile" accept="image/png,image/webp,image/gif" multiple hidden>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <!-- sticker finishes: non-destructive SVG filters applied on top of the untouched original -->
+  <filter id="cbB" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+    <feMorphology in="SourceAlpha" operator="dilate" radius="4" result="d"/>
+    <feGaussianBlur in="d" stdDeviation="1.1" result="db"/>
+    <feComponentTransfer in="db" result="ds"><feFuncA type="linear" slope="3" intercept="-1"/></feComponentTransfer>
+    <feFlood flood-color="#ffffff"/><feComposite in2="ds" operator="in" result="w"/>
+    <feMorphology in="ds" operator="erode" radius="1" result="din"/>
+    <feComposite in="ds" in2="din" operator="out" result="rim"/>
+    <feFlood flood-color="#000" flood-opacity=".1"/><feComposite in2="rim" operator="in" result="rim2"/>
+    <feMerge><feMergeNode in="w"/><feMergeNode in="rim2"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="cbW" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency=".07" numOctaves="3" seed="7" result="n"/>
+    <feMorphology in="SourceAlpha" operator="erode" radius="2" result="er"/>
+    <feComposite in="SourceAlpha" in2="er" operator="out" result="edge"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -16 0 0 0 5.9" result="hole"/>
+    <feComposite in="hole" in2="edge" operator="in" result="nick"/>
+    <feComposite in="SourceGraphic" in2="nick" operator="out" result="cut"/>
+    <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="3" result="fn"/>
+    <feColorMatrix in="fn" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  4 0 0 0 -2.75" result="spk"/>
+    <feComposite in="spk" in2="cut" operator="in" result="spk2"/>
+    <feMerge><feMergeNode in="cut"/><feMergeNode in="spk2"/></feMerge>
+  </filter>
+  <filter id="cbG" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="2.5" result="b"/>
+    <feSpecularLighting in="b" surfaceScale="3" specularConstant=".8" specularExponent="20" lighting-color="#ffffff" result="s"><feDistantLight azimuth="225" elevation="52"/></feSpecularLighting>
+    <feComposite in="s" in2="SourceAlpha" operator="in" result="s2"/>
+    <feComposite in="SourceGraphic" in2="s2" operator="arithmetic" k1="0" k2="1" k3=".5" k4="0"/>
+  </filter>
+  <filter id="cbM" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" seed="5" result="n"/>
+    <feColorMatrix in="n" type="matrix" values=".33 .33 .33 0 0  .33 .33 .33 0 0  .33 .33 .33 0 0  0 0 0 0 .45" result="g"/>
+    <feBlend in="g" in2="SourceGraphic" mode="soft-light" result="bl"/>
+    <feComposite in="bl" in2="SourceAlpha" operator="in"/>
+  </filter>
+</defs></svg>
+<div class="lfab" id="lfab" role="toolbar" aria-label="Board tools" style="display:none">
+<button class="tbtn gear" id="gear" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+<button class="tbtn" id="yarnBtn" aria-pressed="false" title="Pins and yarn: stick pins in and tie them together"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><path d="M6.5 8.5c3 1 8 1 11-1M5 12.5c4 1.5 10 1.5 14-.5M6.5 16.5c3 .8 8 .5 11-1.5"/><path d="M19 17l3 4"/></svg></button>
+<i class="tsep" aria-hidden="true"></i><div class="zm" role="group" aria-label="Zoom"><button id="zmOut" title="Zoom out (or Ctrl + scroll)" aria-label="Zoom out">&minus;</button><button id="zmN" title="Back to 100%" aria-label="Reset zoom">100%</button><button id="zmIn" title="Zoom in" aria-label="Zoom in" disabled>+</button></div>
+</div>
+<div id="set" role="dialog" aria-modal="true" aria-labelledby="setT"><div class="sbox">
+  <div id="setMain">
+    <div class="shead"><h2 id="setT">Settings</h2><button class="sx" id="setX" title="Close" aria-label="Close">&times;</button></div>
+    <div class="stabs" id="stabs" role="tablist" aria-label="Settings sections">
+      <button role="tab" data-pane="general" id="tb-general" aria-controls="pn-general">General</button>
+      <button role="tab" data-pane="theme" id="tb-theme" aria-controls="pn-theme">Theme</button>
+      <button role="tab" data-pane="cards" id="tb-cards" aria-controls="pn-cards">Cards</button>
+      <button role="tab" data-pane="board" id="tb-board" aria-controls="pn-board">Board</button>
+    </div>
+    <div class="spane" id="pn-general" role="tabpanel" aria-labelledby="tb-general">
+      <section class="sgrp">
+        <h3>Sound</h3>
+        <label class="trow"><span>Sound effects</span><input type="checkbox" class="sw" id="sndOn"></label>
+        <div class="vrow"><input type="range" id="vol" min="0" max="100" step="1" aria-label="Sound effects volume"><output id="volN" for="vol">80%</output></div>
+      </section>
+      <section class="sgrp">
+        <h3>Motion</h3>
+        <label class="trow"><span>Polaroids dangle when moved</span><input type="checkbox" class="sw" id="dangleOn"></label>
+      </section>
+    </div>
+    <div class="spane" id="pn-theme" role="tabpanel" aria-labelledby="tb-theme" hidden>
+      <section class="sgrp">
+        <h3>Board theme</h3>
+        <div class="thms" id="thmList" role="radiogroup" aria-label="Theme"></div>
+        <div class="cust" id="custBox" hidden></div>
+      </section>
+      <section class="sgrp">
+        <h3>Wallpaper</h3>
+        <div class="wall" id="wallBox"></div>
+      </section>
+    </div>
+    <div class="spane" id="pn-cards" role="tabpanel" aria-labelledby="tb-cards" hidden>
+      <section class="sgrp">
+        <h3>Card style</h3>
+        <div id="styleBox"></div>
+      </section>
+    </div>
+    <div class="spane" id="pn-board" role="tabpanel" aria-labelledby="tb-board" hidden>
+      <section class="sgrp">
+        <h3>Sections</h3>
+        <div id="secList"></div>
+      </section>
+      <section class="sgrp">
+        <h3>Templates</h3>
+        <p class="shint2">Start a new section from a ready-made layout, or save one of yours to reuse. (&ldquo;+ Section&rdquo; opens this too.)</p>
+        <button class="sbtn alt" id="tplBtn">Templates&hellip;</button>
+      </section>
+      <section class="sgrp">
+        <h3>Storage</h3>
+        <button class="sbtn alt" id="showFolder">Show folder&hellip;</button>
+      </section>
+    </div>
+    <div class="about" id="about"></div>
+  </div>
+  <div id="setStore" hidden>
+    <button class="sback" id="stBack">&#8249; Back to settings</button>
+    <div class="shead"><h2>Where is everything stored</h2></div>
+    <p class="sp" id="stLead">Your board lives in a folder on your computer. Nothing important is kept in the browser.</p>
+    <div class="tree">
+      <div class="t0" id="stName"></div>
+      <div class="t1"><b>photos/</b> &ndash; the original photos, videos, stickers and PDF documents (and your wallpaper photo), copied in unchanged</div>
+      <div class="t1"><b>thumbs/</b> &ndash; smaller copies of your photos so the board stays fast (safe to delete; they&rsquo;re made again when needed)</div>
+      <div class="t1"><b>board.json</b> &ndash; the layout: title, sections, positions, captions, sizes, notes, to-do lists, calendars, index cards, pins and yarn, templates, the shelf, labels, links, your sticker collection, fonts, photo filters, sticker finishes, theme, card style and sound settings</div>
+    </div>
+    <p class="sp" id="stCount"></p>
+    <p class="sp" id="stInfo">A web page can&#8217;t open your file explorer or see the full folder path, because browsers keep that private. The button below opens the system folder dialog inside your board&#8217;s folder, so you can see where it is. Press Cancel to leave everything as it is. If you pick a different folder, the board switches to it.</p>
+    <div class="sbtns">
+      <button class="sbtn" id="stPicker">Open folder picker here</button>
+      <button class="sbtn alt" id="stChoose">Choose a different folder</button>
+    </div>
+    <div class="tip" id="stTip"><div id="stWin"></div><div id="stMac"></div></div>
+  </div>
+</div></div>
+<div id="fx" role="dialog" aria-modal="true" aria-labelledby="fxT"><div class="fxbox">
+  <div class="fxh"><h2 id="fxT">Filters</h2><p id="fxSub">Your original photo stays untouched. You can change this later with the filter button (half-circle icon) on the card.</p></div>
+  <div class="fxpv" id="fxPv"></div>
+  <div><div class="fxps" id="fxPs" role="radiogroup" aria-label="Filter presets"></div><div class="fxsl" id="fxSl"></div></div>
+  <div class="fxbtns"><button class="sbtn alt" id="fxReset">Reset</button><span class="gap"></span><button class="sbtn alt" id="fxNo">Cancel</button><button class="sbtn" id="fxOk">Apply</button></div>
+</div></div>
+<div id="rd" role="dialog" aria-modal="true" aria-label="Document"><div class="rdp ld"><canvas></canvas></div><button class="rdn prv" title="Previous page" aria-label="Previous page">&#8249;</button><button class="rdn nxt" title="Next page" aria-label="Next page">&#8250;</button><div class="rdc" aria-live="polite"></div><button id="rdX" title="Close" aria-label="Close">&times;</button></div>
+<div id="lb" role="dialog" aria-modal="true" aria-label="Video"><div class="lbm fxm"><video controls playsinline></video><i class="fxl w"></i><i class="fxl f"></i><i class="fxl v"></i><i class="fxl g"></i></div><button id="lbX" title="Close" aria-label="Close">&times;</button></div>
+<svg id="yarn" style="display:none" aria-label="Pins and yarn"><path class="ytmp" style="display:none"/><g class="yg"></g><g class="pg2"></g></svg>
+<div id="ytools" class="ytools" hidden><b>Yarn</b><span class="ytip">Tap the board or a card to stick in a pin &middot; drag from one pin to another to tie yarn</span><span class="ytc"></span><button class="sbtn alt" id="yClear" title="Remove every pin and yarn in this section">Remove all</button><button class="sbtn" id="yDone">Done</button></div>
+<div id="hbar" class="hbar" hidden aria-hidden="true"><i></i></div>
+<button class="edge edgeL" id="edgeL" hidden title="Scroll left to see it (double-click to zoom out and see everything)"><span>&lsaquo;</span> <b>0</b> more</button>
+<button class="edge edgeR" id="edgeR" hidden title="Scroll right to see it (double-click to zoom out and see everything)"><b>0</b> more <span>&rsaquo;</span></button>
+<div id="shelf" class="shelf shempty" style="display:none">
+  <div class="shtray" id="shTray" role="region" aria-label="Shelf">
+    <div class="shhead"><b>Shelf</b><span class="shtip">Drag things here to carry them to another section. Shift-click to pick several, then drag them together.</span><button class="sbtn alt" id="shAll" hidden>Put everything here</button></div>
+    <div class="shg" id="shG"></div><div class="shdrop">Drop here to put it on the shelf</div>
+  </div>
+  <button class="shbtn" id="shBtn" aria-expanded="false" title="The shelf: carry things between sections"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15h18M5 15v4M19 15v4"/><rect x="5" y="8" width="5" height="7" rx=".8"/><path d="M12.5 15 14 8.5l4.5 1-1.6 5.5"/></svg><span class="shl">Shelf</span><span class="shdl">Drop on shelf</span><i class="shn" id="shN" hidden>0</i></button>
+</div>
+<div id="tpl" style="display:none" role="dialog" aria-modal="true" aria-labelledby="tplT"><div class="box tplbox">
+  <h2 id="tplT">New section</h2>
+  <p>Start from a template, then change anything you like.</p>
+  <label class="tpln"><span>Name</span><input id="tplName" class="sin" maxlength="24" placeholder="New section"></label>
+  <div class="tplg" id="tplG" role="radiogroup" aria-label="Templates"></div>
+  <h3 class="tplh3">Your templates</h3>
+  <div class="tplg" id="tplM"></div>
+  <div class="tplbtns"><button class="sbtn alt" id="tplSave">Save this section as a template</button><span class="gap"></span><button class="sbtn alt" id="tplNo">Cancel</button><button class="sbtn" id="tplOk">Create section</button></div>
+</div></div>
+<div id="ask" style="display:none" role="dialog" aria-modal="true" aria-labelledby="askT"><div class="box">
+  <h2 id="askT">How should these look?</h2>
+  <p>Your photos stay untouched on your computer either way. This only changes how they&#8217;re displayed.</p>
+  <div class="opts">
+    <button class="opt" data-m="square"><span class="mini sq"><i></i></span>Crop to polaroid<small>square</small></button>
+    <button class="opt" data-m="original"><span class="mini og"><i></i></span>Original ratio<small>keeps the whole photo</small></button>
+    <button class="opt" data-m="bare"><span class="mini br"><i></i></span>No frame<small>just the photo &amp; a pin</small></button>
+    <button class="opt" data-m="strip" id="optStrip"><span class="mini stp"><i></i><i></i><i></i><i></i></span>Photobooth strip<small id="optStripN">4 photos per strip</small></button>
+  </div>
+  <div class="abtns"><button class="sbtn alt" id="askNo">Cancel</button></div>
+</div></div>
+
+<div id="start"><div class="box">
+  <h2>Welcome</h2>
+  <p id="msg">Pick a folder on your computer. Your photos, notes and layout are saved inside it, so they always stay yours.</p>
+  <div id="btns"></div>
+</div></div>
+
+<script src="desktop/fs-shim.js"></script>
+<script src="app.js"></script>
+<script src="desktop/bridge.js"></script>
+</body>
+</html>

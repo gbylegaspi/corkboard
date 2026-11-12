@@ -1,0 +1,30 @@
+{
+  "name": "corkboard",
+  "productName": "Corkboard",
+  "version": "1.6.3",
+  "description": "Corkboard: a cosy photo and notes board that saves into a folder you choose.",
+  "author": "Corkboard",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "src/main/main.js",
+  "scripts": {
+    "vendor": "node scripts/vendor.js",
+    "predev": "node scripts/vendor.js",
+    "dev": "electron .",
+    "pretest": "node scripts/vendor.js",
+    "test": "playwright test",
+    "build:mac": "node scripts/vendor.js && electron-builder --mac",
+    "build:win": "node scripts/vendor.js && electron-builder --win",
+    "icons": "electron scripts/make-icons.js"
+  },
+  "dependencies": {
+    "heic-convert": "2.1.0"
+  },
+  "devDependencies": {
+    "@fontsource/inter": "5.3.0",
+    "@playwright/test": "1.65.0",
+    "electron": "45.3.1",
+    "electron-builder": "26.18.0",
+    "pdfjs-dist": "6.2.108"
+  }
+}

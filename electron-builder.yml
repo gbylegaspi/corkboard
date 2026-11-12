@@ -1,0 +1,75 @@
+# Corkboard packaging (electron-builder). Builds are unsigned by default; see docs/SIGNING.md.
+appId: app.corkboard.desktop
+productName: Corkboard
+copyright: Corkboard
+artifactName: Corkboard-${version}-${os}-${arch}.${ext}
+
+directories:
+  output: dist
+  buildResources: build
+
+# only the app itself; pdf.js and Inter are already copied into src/renderer by scripts/vendor.js
+files:
+  - package.json
+  - src/**/*
+  - "!src/**/*.map"
+extraResources:
+  - from: build/THIRD_PARTY_LICENSES.txt
+    to: THIRD_PARTY_LICENSES.txt
+  - from: build/icon.png
+    to: icon.png
+asar: true
+# the HEIC converter runs in a worker thread, which loads its code from disk outside the archive
+asarUnpack:
+  - src/main/heic-worker.js
+  - node_modules/heic-convert/**/*
+  - node_modules/heic-decode/**/*
+  - node_modules/libheif-js/**/*
+  - node_modules/jpeg-js/**/*
+  - node_modules/pngjs/**/*
+electronLanguages: [en, en-GB, en-US]   # macOS/Windows UI strings for Electron's own menus; the app's text is English
+
+mac:
+  target:
+    - target: dmg
+      arch: [universal]
+  icon: build/icon.icns
+  category: public.app-category.lifestyle
+  # "-" = ad-hoc signature: no certificate needed, and Apple Silicon Macs will run it.
+  # With a Developer ID certificate, remove this line (or set CSC_NAME); see docs/SIGNING.md.
+  identity: "-"
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  darkModeSupport: true
+  minimumSystemVersion: "12.0"
+  extendInfo:
+    NSHumanReadableCopyright: Corkboard
+dmg:
+  title: Corkboard ${version}
+  contents:
+    - { x: 150, y: 190 }
+    - { x: 390, y: 190, type: link, path: /Applications }
+  window: { width: 540, height: 380 }
+
+win:
+  target:
+    - target: nsis
+      arch: [x64, arm64]
+    - target: portable
+      arch: [x64, arm64]
+  icon: build/icon.ico
+  # unsigned by default; see docs/SIGNING.md for Authenticode
+  signAndEditExecutable: true
+nsis:
+  oneClick: false
+  perMachine: false              # per-user install, no admin rights needed
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Corkboard
+  artifactName: Corkboard-${version}-setup-${arch}.${ext}
+portable:
+  artifactName: Corkboard-${version}-portable-${arch}.${ext}
+
+publish: null                    # no auto-updater, nothing is uploaded anywhere

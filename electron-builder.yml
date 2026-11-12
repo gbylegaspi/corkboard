@@ -13,6 +13,7 @@ files:
   - package.json
   - src/**/*
   - "!src/**/*.map"
+  - "!src/renderer/js/**"   # the page runs the bundle (src/renderer/build/app.js), not these sources
 extraResources:
   - from: build/THIRD_PARTY_LICENSES.txt
     to: THIRD_PARTY_LICENSES.txt

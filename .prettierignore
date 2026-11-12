@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+test-results/
+playwright-report/
+tests/.fixtures/
+tests/web-host/
+src/renderer/vendor/
+src/renderer/fonts/
+src/renderer/build/
+*.html
+corkboard v*.html
+# prose and config keep their hand formatting
+*.md
+*.yml

@@ -8,6 +8,6 @@ parentPort.on('message', async ({ id, buf }) => {
     const ab = out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength);
     parentPort.postMessage({ id, jpeg: ab }, [ab]);
   } catch (e) {
-    parentPort.postMessage({ id, err: String(e && e.message || e) });
+    parentPort.postMessage({ id, err: String((e && e.message) || e) });
   }
 });

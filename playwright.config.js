@@ -5,7 +5,7 @@ module.exports = defineConfig({
   testMatch: /\d+-.*\.spec\.js$/,
   timeout: 180000,
   expect: { timeout: 15000 },
-  workers: 1,            // one Electron app at a time (single-instance lock, sounds, focus)
+  workers: 1, // one Electron app at a time (single-instance lock, sounds, focus)
   fullyParallel: false,
   retries: 0,
   reporter: [['list']],

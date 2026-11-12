@@ -9,22 +9,33 @@
   "main": "src/main/main.js",
   "scripts": {
     "vendor": "node scripts/vendor.js",
-    "predev": "node scripts/vendor.js",
-    "dev": "electron .",
-    "pretest": "node scripts/vendor.js",
+    "build:renderer": "node scripts/build-renderer.js",
+    "prepare:app": "node scripts/vendor.js && node scripts/build-renderer.js",
+    "dev": "npm run prepare:app && electron .",
+    "watch": "node scripts/build-renderer.js --watch",
+    "pretest": "npm run prepare:app",
     "test": "playwright test",
-    "build:mac": "node scripts/vendor.js && electron-builder --mac",
-    "build:win": "node scripts/vendor.js && electron-builder --win",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run lint && npm run format:check",
+    "build:mac": "npm run prepare:app && electron-builder --mac",
+    "build:win": "npm run prepare:app && electron-builder --win",
     "icons": "electron scripts/make-icons.js"
   },
   "dependencies": {
     "heic-convert": "2.1.0"
   },
   "devDependencies": {
+    "@eslint/js": "9.13.0",
     "@fontsource/inter": "5.3.0",
     "@playwright/test": "1.65.0",
     "electron": "45.3.1",
     "electron-builder": "26.18.0",
-    "pdfjs-dist": "6.2.108"
+    "esbuild": "0.24.0",
+    "eslint": "9.13.0",
+    "globals": "15.11.0",
+    "pdfjs-dist": "6.2.108",
+    "prettier": "3.3.3"
   }
 }

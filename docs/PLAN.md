@@ -1,5 +1,7 @@
 # Corkboard desktop: plan
 
+**Code tidy-up (after 2.0.1, no change for users):** Prettier and ESLint across the project; the page's code is now ES modules in `src/renderer/js/`, bundled by esbuild (`scripts/build-renderer.js`). Self-contained parts moved out of `app.js` into `catalog`, `templates`, `richtext`, `sound`, `icons` and `util`; dead code from the web version removed. See `ARCHITECTURE.md` for the layout and the next steps.
+
 Status (2026-11-12): **Phases 1–4 done for macOS.** `npm test` runs 29 Electron tests and passes against the source and against the installed universal `.dmg` build, including macOS behaviour (Dock, ⌘Q saving, password-protected PDFs, sound without a click). `npm run build:mac` makes `dist/Corkboard-1.6.3-mac-universal.dmg` (229 MB, ad-hoc signed, Apple Silicon and Intel). The Windows configuration is written but not built or tested; that waits until you ask.
 
 **Version 1.7.0** (her requests; app only, the web file isn't updated):

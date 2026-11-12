@@ -882,3 +882,6 @@ background-image:repeating-linear-gradient(transparent 0 calc(21px*var(--sc,1)),
 .ssel{font:inherit;font-size:14px;color:var(--ink);background:#fff;border:1px solid #d9cdbb;border-radius:8px;padding:6px 8px;max-width:58%}
 .card:not(:hover) .film input:placeholder-shown:not(:focus)::placeholder,.film:not(:hover) input:placeholder-shown:not(:focus)::placeholder{color:transparent}
 .card.cal .calh{padding-left:calc(var(--bs,32px) + var(--bi) + 6px);padding-right:calc(var(--bs,32px) + var(--bi) + 6px)} /* v2.0: the arrows clear the card's buttons */
+/* v2.0.1: tilt handle on polaroids and photobooth strips (the stack's move grip uses the same spot, never at the same time) */
+.card:not(.note):not(.idx):not(.strip):not(.sticker) .cb.rot{left:calc(var(--bi) + 2*var(--bs,32px) + 8px);bottom:var(--bi)}
+.strip .cb.rot{left:calc(var(--bi) + var(--bs,32px) + 4px);bottom:var(--bi)}

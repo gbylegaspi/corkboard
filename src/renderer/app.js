@@ -158,7 +158,7 @@ function draggable(el,p,onTap,hk){
     paint();raf=requestAnimationFrame(tick);
   }
   function startSwing(e){
-    if(!hasHoldPin(p)||!hasRealPin(p)||data.dangle===false)return; // v2.0: only while it still has a pin
+    if(!(hasHoldPin(p)||isPhotoCard(p))||!hasRealPin(p)||data.dangle===false)return; // v2.0: only while it has a pin
     ph=el.offsetHeight/2;px=ppx=e.clientX;svx=0;
     vel+=(Math.random()<.5?-1:1)*(90+Math.random()*50);el.classList.add('swing');
     if(!raf){lastT=performance.now();raf=requestAnimationFrame(tick)}
@@ -428,7 +428,7 @@ function applyFrame(el,p){
   var tp=el.querySelectorAll(':scope>.tape');
   if(tape&&!tp.length)['tl','tr'].forEach(function(c){var t=document.createElement('div');t.className='tape '+c;el.appendChild(t)});
   if(!tape)tp.forEach(function(t){t.remove()});
-  var b=el.querySelector('.frm');if(b){var tt=!bare?'Polaroid frame (click for no frame)':tape?'No frame, taped (click for polaroid frame)':'No frame, pinned (click for tape)';b.title=tt;b.setAttribute('aria-label',tt)}
+  var b=el.querySelector('.frm');if(b){var tt=!bare?'Polaroid frame (click for no frame)':tape?'No frame, taped (click for polaroid frame)':'No frame (click for tape)';b.title=tt;b.setAttribute('aria-label',tt)}
 }
 async function measure(f){try{var b=await createImageBitmap(f),r=b.width/b.height;if(b.close)b.close();return Math.round(r*1000)/1000}catch(e){return 1}}
 var askEl=document.getElementById('ask');
@@ -508,7 +508,7 @@ function renderStrip(p){
   if(holdPin(p)){save();yarnFor(900)} // v2.0
   var el=document.createElement('div');el.className='card strip';el.tabIndex=0;place(el,p);
   var fr='';for(var i=0;i<4;i++)fr+='<div class="sf fxm"><img alt="" decoding="async">'+fxLayers()+'</div>';
-  el.innerHTML='<div class="pin"></div><div class="ph"><div class="sframes">'+fr+'</div>'+FX_BTN+FONT_BTN+PILE_BTNS+'<button class="cb del" title="Remove" aria-label="Remove">'+IC.x+'</button><button class="cb rz" title="Drag to resize (double-click to reset)" aria-label="Resize">'+IC.rz+'</button></div><input class="cap" maxlength="40" placeholder="add a caption">';
+  el.innerHTML='<div class="pin"></div><div class="ph"><div class="sframes">'+fr+'</div>'+FX_BTN+FONT_BTN+PILE_BTNS+ROT_BTN+'<button class="cb del" title="Remove" aria-label="Remove">'+IC.x+'</button><button class="cb rz" title="Drag to resize (double-click to reset)" aria-label="Resize">'+IC.rz+'</button></div><input class="cap" maxlength="40" placeholder="add a caption">';
   el.querySelectorAll('.sf img').forEach(function(im,i){bindImg(im,fileKey(p,i),p.files[i],4/3)});
   cardFx(el,p);resizable(el,p);
   var inp=el.querySelector('input');inp.value=p.caption||'';
@@ -519,7 +519,7 @@ function renderStrip(p){
     var pid=p.pile;data.photos=data.photos.filter(function(q){return q.id!==p.id});
     dropFiles(p);save();bye(el,p.id,function(){dropUrls(p)});pileFix(pid);
   });
-  draggable(el,p,null,stackCard(el,p));pinUp(el,p);idxState(el,p);
+  rotatable(el,p);draggable(el,p,null,stackCard(el,p));pinUp(el,p);idxState(el,p); // v2.0.1: tilt
 }
 
 // ---- photos ----
@@ -527,7 +527,7 @@ function renderPhoto(p){if(p.kind==='doc')return renderDoc(p);if(p.kind==='video
   if(holdPin(p)){save();yarnFor(900)} // v2.0
   var el=document.createElement('div');el.className='card';el.tabIndex=0;place(el,p);
   var url=mediaUrl(p.id);
-  el.innerHTML='<div class="pin"></div><div class="ph fxm"><img alt="" decoding="async">'+fxLayers()+'<button class="cb ratio" title="Switch between square crop and original ratio" aria-label="Switch between square crop and original ratio">'+IC.crop+'</button><button class="cb frm" title="Frame" aria-label="Frame">'+IC.frame+'</button>'+FX_BTN+FONT_BTN+PILE_BTNS+'<button class="cb del" title="Remove" aria-label="Remove">'+IC.x+'</button><button class="cb rz" title="Drag to resize (double-click to reset)" aria-label="Resize">'+IC.rz+'</button></div><input class="cap" maxlength="40" placeholder="add a caption">';
+  el.innerHTML='<div class="pin"></div><div class="ph fxm"><img alt="" decoding="async">'+fxLayers()+'<button class="cb ratio" title="Switch between square crop and original ratio" aria-label="Switch between square crop and original ratio">'+IC.crop+'</button><button class="cb frm" title="Frame" aria-label="Frame">'+IC.frame+'</button>'+FX_BTN+FONT_BTN+PILE_BTNS+ROT_BTN+'<button class="cb del" title="Remove" aria-label="Remove">'+IC.x+'</button><button class="cb rz" title="Drag to resize (double-click to reset)" aria-label="Resize">'+IC.rz+'</button></div><input class="cap" maxlength="40" placeholder="add a caption">';
   var inp=el.querySelector('input');inp.value=p.caption||'';
   var im=el.querySelector('img');bindImg(im,p.id,p.file,p.ar);applyMode(el,im,p);resizable(el,p);cardFx(el,p);applyFrame(el,p);applyCardFont(el,p);
   // frame button cycles: polaroid -> no frame with a pin -> no frame with tape -> polaroid
@@ -547,7 +547,7 @@ function renderPhoto(p){if(p.kind==='doc')return renderDoc(p);if(p.kind==='video
     var pid=p.pile;data.photos=data.photos.filter(function(q){return q.id!==p.id});
     dropFiles(p);save();bye(el,p.id,function(){dropUrls(p)});pileFix(pid);
   });
-  draggable(el,p,null,stackCard(el,p));pinUp(el,p);idxState(el,p);
+  rotatable(el,p);draggable(el,p,null,stackCard(el,p));pinUp(el,p);idxState(el,p); // v2.0.1: tilt
 }
 
 // ---- v1.1.6: fonts for captions and labels (system fonts that ship with Windows and macOS; each style lists both) ----
@@ -1591,7 +1591,7 @@ async function addFiles(list,stripOnly){
 }
 
 // ---- settings panel ----
-var VERSION='v2.0.0';
+var VERSION='v2.0.1';
 var gearBtn=document.getElementById('gear'),setEl=document.getElementById('set'),setMain=document.getElementById('setMain'),setStore=document.getElementById('setStore'),
     sndOn=document.getElementById('sndOn'),volEl=document.getElementById('vol'),volN=document.getElementById('volN'),secList=document.getElementById('secList');
 document.getElementById('about').textContent='About · Corkboard '+VERSION;
@@ -2325,7 +2325,13 @@ edgeL.addEventListener('dblclick',zoomToFit);edgeR.addEventListener('dblclick',z
 // v2.0: polaroids, no-frame pinned photos, photobooth strips and calendars no longer have a pin drawn on them. Each gets a
 // real pin instead (the same spot, top middle), made once per card (o.pn), that can be moved, recoloured, removed or tied.
 // fx = where along the card's width (0–1); ox/oy stay for versions before 2.0. Moving the pin replaces fx with ox.
-function hasHoldPin(o){if(!o)return false;if(o.kind==='cal'||o.kind==='strip')return true;return !!(o.file&&(!o.kind||o.kind==='photo')&&!(o.bare&&o.hold==='tape'))}
+// v2.0.1: only calendars still come with a pin; polaroids and photobooth strips don't have one (you can stick your own in)
+function hasHoldPin(o){return !!o&&o.kind==='cal'}
+function isPhotoCard(o){return !!o&&!!(o.file||o.files)&&(!o.kind||o.kind==='photo'||o.kind==='strip')}
+// the pins 2.0 gave every polaroid and strip (still in their first spot: fx) go, with any yarn tied to them
+function dropPhotoPins(){var ph={},gone={};data.photos.forEach(function(o){if(isPhotoCard(o))ph[o.id]=1});
+  data.pins=data.pins.filter(function(q){if(q.card&&ph[q.card]&&q.fx!=null){gone[q.id]=1;return false}return true});
+  if(!Object.keys(gone).length)return false;data.yarns=data.yarns.filter(function(y){return !gone[y.a]&&!gone[y.b]});return true}
 function holdPin(o){if(!o||o.pn||!hasHoldPin(o))return false;o.pn=1;data.pins.push({id:'q'+uid(),c:(data.style&&data.style.pin)||'#d6264f',card:o.id,fx:.5,ox:110,oy:0});return true}
 function holdPins(){var n=0;data.photos.concat(data.notes).forEach(function(o){if(holdPin(o))n++});return n}
 function hasRealPin(o){return !!o&&data.pins.some(function(q){return q.card===o.id})}
@@ -2542,7 +2548,7 @@ async function mount(h){
     var hexC=function(c){return YARN_COLS.indexOf(c)>=0?c:YARN_COLS[0]};
     data.pins=(Array.isArray(data.pins)?data.pins:[]).filter(function(p){return p&&typeof p.id==='string'}).map(function(p){var o={id:p.id,c:hexC(p.c)};
       if(typeof p.card==='string'){o.card=p.card;o.ox=+p.ox||0;o.oy=+p.oy||0;if(typeof p.fx==='number'&&p.fx>=0&&p.fx<=1)o.fx=p.fx}else{var sids=data.sections.map(function(q){return q.id});o.s=sids.indexOf(p.s)>=0?p.s:sids[0];o.x=isFinite(+p.x)?+p.x:.5;o.y=isFinite(+p.y)?+p.y:300}return o});
-    if(holdPins())save(); // v2.0: drawn card pins become real pins, once
+    var ch=dropPhotoPins();if(holdPins()||ch)save(); // v2.0: drawn calendar pins become real pins, once; v2.0.1: none on photos
     var pidOk={};data.pins.forEach(function(p){pidOk[p.id]=1});
     data.yarns=(Array.isArray(data.yarns)?data.yarns:[]).filter(function(y){return y&&pidOk[y.a]&&pidOk[y.b]&&y.a!==y.b}).map(function(y){return{id:typeof y.id==='string'?y.id:'y'+uid(),a:y.a,b:y.b,c:hexC(y.c)}});
     yCol=hexC(data.yarnCol);

@@ -41,10 +41,8 @@ test('title, layout width, controls above the yarn, settings, captions', async (
     await ctx.app.evaluate(({ BrowserWindow }, w) => BrowserWindow.getAllWindows()[0].setContentSize(w, 800), W);
     await page.waitForTimeout(700);
     h.expect(await zoomFactor(ctx.app)).toBeCloseTo(1, 3);
-    // the polaroid's drawn pin is now a real pin (top middle); nothing is drawn on the card any more
-    d = await h.saved(ctx, d => d.pins.length === 1);
-    h.expect(d.pins[0]).toMatchObject({ card: 'p.png', fx: .5, oy: 0 });
-    h.expect(photo(d, 'p.png').pn).toBe(1);
+    // v2.0.1: a polaroid has no pin at all (none drawn, none made)
+    h.expect(h.readBoard(ctx).pins).toEqual([]);
     h.expect(await (await h.card(page, 'p.png')).$eval('.pin', e => getComputedStyle(e).display)).toBe('none');
     // the toolbars sit above the pins and yarn
     h.expect(await page.evaluate(() => +getComputedStyle(document.getElementById('lfab')).zIndex > +getComputedStyle(document.getElementById('yarn')).zIndex)).toBe(true);
@@ -52,7 +50,7 @@ test('title, layout width, controls above the yarn, settings, captions', async (
     // a pin stuck right on a card's delete button: hovering the card cuts it out, so the button gets the click
     const nel = await h.card(page, 'n'), del = await h.buttonBox(page, nel, 'del');
     await page.click('#yarnBtn'); await page.mouse.click(del.x + del.width / 2, del.y + del.height / 2); await page.click('#yDone');
-    await h.saved(ctx, d => d.pins.length === 2);
+    await h.saved(ctx, d => d.pins.length === 1);
     await page.mouse.move(640, 5); await page.waitForTimeout(300);
     h.expect(await topAt(page, del.x + del.width / 2, del.y + del.height / 2)).toContain('phd');     // not hovered: the pin
     await nel.hover({ position: { x: 20, y: 60 } }); await page.waitForTimeout(500);
@@ -103,24 +101,31 @@ test('text: index card lines scroll with it, bold and italics in to-do lists', a
   } finally { await h.close(ctx); }
 });
 
-test('real pins on polaroids, polaroid stacks, calendar looks', async () => {
+test('no pins on polaroids, tilt them, polaroid stacks, calendar looks', async () => {
+  // a board saved by 2.0: each polaroid got a pin (fx: still in its first spot); a has yarn to a board pin, b has a pin she stuck in
   const ctx = h.newBoard({ files: { 'a.png': fx.photoSmall(1), 'b.png': fx.photoSmall(2) }, data: { title: 'T', cur: 's1', sections: [{ id: 's1', name: 'One' }],
-    photos: [{ id: 'a.png', file: 'a.png', kind: 'photo', s: 's1', x: .05, y: 240, rot: 0, z: 1, mode: 'square' },
-             { id: 'b.png', file: 'b.png', kind: 'photo', s: 's1', x: .5, y: 260, rot: 0, z: 2, mode: 'square' }] } });
+    photos: [{ id: 'a.png', file: 'a.png', kind: 'photo', s: 's1', x: .05, y: 240, rot: 0, z: 1, mode: 'square', pn: 1 },
+             { id: 'b.png', file: 'b.png', kind: 'photo', s: 's1', x: .5, y: 260, rot: 0, z: 2, mode: 'square', pn: 1 }],
+    pins: [{ id: 'q1', c: '#d6264f', card: 'a.png', fx: .5, ox: 110, oy: 0 }, { id: 'q2', c: '#d6264f', card: 'b.png', fx: .5, ox: 110, oy: 0 },
+           { id: 'q3', c: '#2f6fd6', card: 'b.png', ox: 60, oy: 80 }, { id: 'q4', c: '#2f6fd6', s: 's1', x: .8, y: 600 }],
+    yarns: [{ id: 'y1', a: 'q1', b: 'q4', c: '#2f6fd6' }, { id: 'y2', a: 'q3', b: 'q4', c: '#2f6fd6' }] } });
   let page = await h.launch(ctx);
   try {
+    // v2.0.1: the pins 2.0 made (and the yarn tied to them) are gone; hers stay
     let d = await h.saved(ctx, d => d.pins.length === 2);
-    // remove a's pin (click it → Remove pin); it stays gone after reopening
-    const ael = await h.card(page, 'a.png'), ab = await ael.boundingBox();
+    h.expect(d.pins.map(q => q.id)).toEqual(['q3', 'q4']);
+    h.expect(d.yarns.map(y => y.id)).toEqual(['y2']);
+    // tilt a polaroid with its handle; double-click straightens it
+    await page.mouse.move(640, 5); await page.waitForTimeout(300);
+    const ael = await h.card(page, 'a.png'), box = await ael.boundingBox(), rot = await h.buttonBox(page, ael, 'rot');
+    const cx = box.x + box.width / 2, cy = box.y + box.height / 2, p0 = { x: rot.x + rot.width / 2, y: rot.y + rot.height / 2 };
+    const ang = Math.atan2(p0.y - cy, p0.x - cx) + 0.4, r = Math.hypot(p0.x - cx, p0.y - cy);
+    await h.drag(page, p0, { x: cx + r * Math.cos(ang), y: cy + r * Math.sin(ang) });
+    d = await h.saved(ctx, d => Math.abs(photo(d, 'a.png').rot) > 12);
+    const rot2 = await h.buttonBox(page, ael, 'rot');
+    await page.mouse.dblclick(rot2.x + rot2.width / 2, rot2.y + rot2.height / 2);
+    await h.saved(ctx, d => photo(d, 'a.png').rot === 0);
     await page.mouse.move(640, 5); await page.waitForTimeout(400);
-    const pin = await page.evaluate(() => [...document.querySelectorAll('#yarn .ypin')].filter(g => g.style.display !== 'none').map(g => { const c = g.querySelector('.phd'); return { x: +c.getAttribute('cx'), y: +c.getAttribute('cy') }; }));
-    const near = pin.sort((p, q) => Math.hypot(p.x - (ab.x + ab.width / 2), p.y - ab.y) - Math.hypot(q.x - (ab.x + ab.width / 2), q.y - ab.y))[0];
-    h.expect(Math.abs(near.x - (ab.x + ab.width / 2))).toBeLessThan(12);
-    await page.mouse.click(near.x, near.y); await page.locator('.pop button', { hasText: 'Remove pin' }).click();
-    d = await h.saved(ctx, d => d.pins.length === 1);
-    h.expect(d.pins[0].card).toBe('b.png');
-    await h.close(ctx); page = await h.launch(ctx);
-    h.expect((await h.saved(ctx)).pins).toHaveLength(1);
     // drop polaroid a onto polaroid b: a stack of 2
     await h.settle(page);
     const a = await (await h.card(page, 'a.png')).boundingBox(), b = await (await h.card(page, 'b.png')).boundingBox();
@@ -128,7 +133,7 @@ test('real pins on polaroids, polaroid stacks, calendar looks', async () => {
     d = await h.saved(ctx, d => photo(d, 'a.png').pile && photo(d, 'a.png').pile === photo(d, 'b.png').pile);
     h.expect(await page.locator('#layer .card.ptop .pcount').textContent()).toBe('2 cards');
     // spread out and unstack for good
-    const top = page.locator('#layer .card.ptop'); await top.hover(); await page.waitForTimeout(450);
+    const top = page.locator('#layer .card.ptop'); await top.hover({ position: { x: 14, y: 14 } }); await page.waitForTimeout(450); // (clear of the yarn across it)
     await top.locator('.cb.pspread').click(); await page.locator('.pop .pi', { hasText: 'Unstack for good' }).click();
     d = await h.saved(ctx, d => !photo(d, 'a.png').pile && !photo(d, 'b.png').pile);
     // calendar looks: week, tear-off day, mini, wide, month

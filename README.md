@@ -47,7 +47,8 @@ xattr -dr com.apple.quarantine /Applications/Corkboard.app
   - Drag the **bottom edge** of a note or card to make it longer or shorter; double-click the edge to reset.
 - **Calendars:** the calendar button on a calendar picks its look: **Month**, **Wide month**, **Mini month**, **Week** or **Tear-off day**.
 - **Photos:** "add a caption" only shows while you point at a photo or video.
-- **Pins:** polaroids, photo strips and calendars come with a real pin. Drag it to move it, or click it to change its colour or remove it, like any pin.
+- **Pins:** polaroids and photo strips have no pin; stick one in with pins and yarn if you like. Calendars come with a real pin you can move, recolour or remove.
+- **Tilt:** the **rotate** handle tilts polaroids and photo strips too; double-click it to straighten.
 - **Videos:** Settings → General → **Videos** chooses whether videos play always, when you point at them, or only when you press play, and whether they play with sound. The speaker button on a video sets that video on its own.
 - **Stacks:** drop a polaroid, photo strip, sticky note, to-do list or index card onto another to stack them. The stack button (**Spread out to look**, **Stack again**, **Unstack for good**) lays the cards out and gathers them back. Pins on stacked cards show as one pin on the stack.
 - **To-do lists:** press ⌘A twice to select the whole list, then ⌘C copies it, Delete clears it, and pasting several lines adds one item per line.

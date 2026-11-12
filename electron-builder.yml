@@ -45,6 +45,13 @@ mac:
   minimumSystemVersion: "12.0"
   extendInfo:
     NSHumanReadableCopyright: Corkboard
+    # shown in macOS's prompt the first time a calendar card shows events from the Calendar app
+    NSCalendarsUsageDescription: Corkboard shows your Calendar events on the calendars on your board. It only reads them.
+    NSCalendarsFullAccessUsageDescription: Corkboard shows your Calendar events on the calendars on your board. It only reads them.
+  # the link to the Calendar app (built by scripts/build-calendar-helper.js)
+  extraResources:
+    - from: build/bin/corkcal
+      to: bin/corkcal
 dmg:
   title: Corkboard ${version}
   contents:

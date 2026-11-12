@@ -1,5 +1,7 @@
 # Corkboard desktop: plan
 
+**Version 2.1.0:** calendar cards link to the Mac's Calendar app (and so to Google or any account added to the Mac). A Swift helper (`native/calendar`, EventKit) reads events for the days shown, and day notes on a linked card become Calendar events: all-day, or an hour from an optional time, in a chosen calendar (`macTo`). Changing or removing a note changes or removes the event it made (`days[date].ev`); other events are never changed. macOS asks for access the first time. A diagnostic log (`logs/calendar.log` in the app's data folder) records each step without any note text. `npm test` runs 38 tests.
+
 **Clean-up:** the single-file web version (`corkboard v1.6.2.html`, `v1.6.3.html`) is no longer kept or tested: the app is the only version. Its round-trip test (11) and the feature inventory of the old file (`FEATURES.md`) went with it; all are still in git history.
 
 **Code tidy-up (after 2.0.1, no change for users):** Prettier and ESLint across the project; the page's code is now ES modules in `src/renderer/js/`, bundled by esbuild (`scripts/build-renderer.js`). Self-contained parts moved out of `app.js` into `catalog`, `templates`, `richtext`, `sound`, `icons` and `util`; dead code from the web version removed. See `ARCHITECTURE.md` for the layout and the next steps.

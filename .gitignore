@@ -9,6 +9,8 @@ src/renderer/fonts/
 # built by scripts/build-renderer.js from src/renderer/js
 src/renderer/build/
 build/THIRD_PARTY_LICENSES.txt
+# built by scripts/build-calendar-helper.js from native/calendar
+build/bin/
 .DS_Store
 
 # local only

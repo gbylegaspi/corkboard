@@ -32,6 +32,20 @@ import {
 } from './catalog.js';
 import { FONT_BTN, FX_BTN, IC, PILE_BTNS, ROT_BTN, RZE, RZ_BTN, SVG_CAR, SVG_PEN, SVG_PLUS } from './icons.js';
 import { edCaret, edSel, rtClean, rtOf, rtPlain, rtRead, rtRender, rtStore, tdRt, tdStore } from './richtext.js';
+import {
+  calendars as macCalendars,
+  cleanChoice as cleanMacChoice,
+  colourOf as macColour,
+  eventsByDay as macEventsByDay,
+  logLine as macLog,
+  removeEvent as macRemoveEvent,
+  writeNote as macWriteNote,
+  info as macInfo,
+  label as macLabel,
+  openPrivacySettings as macPrivacy,
+  requestAccess as macRequest,
+  supported as macSupported
+} from './maccal.js';
 import { getVolume, setSound, setVolume, sfx, soundOn } from './sound.js';
 import { TEMPLATES } from './templates.js';
 import {
@@ -2869,7 +2883,13 @@ import {
       '<div class="calw" aria-hidden="true"></div><div class="calg"></div><ul class="call"></ul>' +
       '<button class="cb dot" title="Change colour" aria-label="Change colour"></button><button class="cb clook" title="Calendar look" aria-label="Calendar look">' +
       IC.callook +
-      '</button><button class="cb del" title="Remove" aria-label="Remove">' +
+      '</button>' +
+      (macSupported()
+        ? '<button class="cb cmac" title="Events from the Calendar app" aria-label="Events from the Calendar app">' +
+          IC.calapp +
+          '</button>'
+        : '') +
+      '<button class="cb del" title="Remove" aria-label="Remove">' +
       IC.x +
       '</button>' +
       RZ_BTN;
@@ -2906,6 +2926,161 @@ import {
     }
     function todayKey() {
       return keyOf(new Date());
+    }
+    // v2.1: events from the Mac's Calendar app (c.mac: true = all calendars, or a list of calendar ids), for the
+    // days shown; fetched when the card is drawn and again when the window comes back to the front
+    var macEv = null,
+      macSig = '',
+      macKey = '';
+    function macRange() {
+      var L = look(),
+        a,
+        b;
+      if (L === 'week' || L === 'day') {
+        a = dayOf();
+        a.setHours(0, 0, 0, 0);
+        if (L === 'week') a.setDate(a.getDate() - ((a.getDay() - ws + 7) % 7));
+        b = new Date(a);
+        b.setDate(a.getDate() + (L === 'week' ? 7 : 1));
+        return [a, b];
+      }
+      var y = +c.ym.slice(0, 4),
+        m = +c.ym.slice(5, 7) - 1;
+      return [new Date(y, m, 1), new Date(y, m + 1, 1)];
+    }
+    function macKeyNow() {
+      var r = macRange();
+      return c.mac ? +r[0] + '|' + +r[1] + '|' + JSON.stringify(c.mac) : '';
+    }
+    function macDay(key) {
+      var own = c.days[key] && c.days[key].ev,
+        list = (macEv && macEv[key]) || [];
+      return own
+        ? list.filter(function (ev) {
+            return ev.eid !== own;
+          })
+        : list;
+    }
+    // day notes on a linked card go to the Calendar app too: a moment after typing stops, and when the pop-up closes.
+    // gone: the event a removed note had made
+    var macT = {};
+    function macSoon(key, gone, now) {
+      var p = macT[key];
+      if (p) clearTimeout(p.t);
+      var g = gone || (p && p.gone);
+      macT[key] = {
+        gone: g,
+        t: setTimeout(
+          function () {
+            macSync(key, g);
+          },
+          now ? 0 : 1500
+        )
+      };
+    }
+    async function macSync(key, gone) {
+      delete macT[key];
+      var st = c.mac && macSupported() ? (await macInfo()).status : 'n/a';
+      macLog(
+        'sync ' +
+          key +
+          ': linked=' +
+          !!c.mac +
+          ' access=' +
+          st +
+          ' note=' +
+          !!(c.days[key] && c.days[key].t) +
+          ' ev=' +
+          !!(c.days[key] && c.days[key].ev) +
+          ' gone=' +
+          !!gone
+      );
+      if (!c.mac || st !== 'authorized') return;
+      var cur = c.days[key];
+      try {
+        if (cur && cur.t) {
+          var r = await macWriteNote(key, cur, c.macTo),
+            eid = r.eid;
+          if (eid && c.days[key] === cur && cur.ev !== eid) {
+            cur.ev = eid;
+            save();
+          }
+          // say where it went, so it's easy to find in the Calendar app
+          if (r.added)
+            toast(
+              'Added to the Calendar app (' +
+                r.added +
+                '), ' +
+                new Date(+key.slice(0, 4), +key.slice(5, 7) - 1, +key.slice(8, 10)).toLocaleDateString(undefined, {
+                  weekday: 'short',
+                  day: 'numeric',
+                  month: 'short'
+                })
+            );
+        } else {
+          var old = (cur && cur.ev) || gone;
+          if (old) await macRemoveEvent(old);
+          if (cur && cur.ev) {
+            delete cur.ev;
+            save();
+          }
+        }
+      } catch (err) {
+        macLog('sync ' + key + ' failed: ' + ((err && err.message) || err));
+        toast('Couldn\u2019t update the Calendar app: ' + ((err && err.message) || 'no answer'));
+      }
+      macLoad(true);
+    }
+    async function macLoad(force) {
+      var k = macKeyNow();
+      if (!k || !macSupported()) {
+        if (macEv) {
+          macEv = null;
+          macSig = '';
+          render();
+        }
+        return;
+      }
+      if (k !== macKey) {
+        macKey = k;
+        macEv = null;
+        macSig = '';
+      } else if (!force && macEv) return;
+      try {
+        var r = macRange(),
+          got = await macEventsByDay(r[0], r[1], c.mac);
+        if (macKey !== k) return;
+        if (got.sig !== macSig || !macEv) {
+          macSig = got.sig;
+          macEv = got.by;
+          render();
+        }
+      } catch (e) {
+        if (macKey === k && macEv) {
+          macEv = null;
+          macSig = '';
+          render();
+        }
+      }
+    }
+    el._macLoad = macLoad;
+    // a day's Calendar events as small coloured lines (week and tear-off day looks)
+    function macLines(cls, list, max) {
+      var w = document.createElement('span');
+      w.className = cls;
+      list.slice(0, max).forEach(function (ev) {
+        var q = document.createElement('span');
+        q.style.setProperty('--ec', macColour(ev));
+        q.textContent = macLabel(ev);
+        w.appendChild(q);
+      });
+      if (list.length > max) {
+        var more = document.createElement('span');
+        more.className = 'cmore';
+        more.textContent = '+ ' + (list.length - max) + ' more';
+        w.appendChild(more);
+      }
+      return w;
     }
     function navLabels() {
       var L = look(),
@@ -2968,6 +3143,11 @@ import {
         x.b.appendChild(h);
         x.b.appendChild(n);
         x.b.appendChild(t);
+        var me = macDay(x.key);
+        if (me.length) {
+          x.b.appendChild(macLines('cwe', me, 4));
+          x.b.title = (x.b.title ? x.b.title + '\n' : '') + me.map(macLabel).join('\n');
+        }
         gEl.appendChild(x.b);
       }
       fit();
@@ -2992,10 +3172,22 @@ import {
       x.b.appendChild(wk);
       x.b.appendChild(n);
       x.b.appendChild(t);
+      var me = macDay(x.key);
+      if (me.length) x.b.appendChild(macLines('cpl', me, 6));
       gEl.appendChild(x.b);
       fit();
     }
     function draw() {
+      var k = macKeyNow();
+      if (k !== macKey) {
+        macKey = k;
+        macEv = null;
+        macSig = '';
+      }
+      render();
+      macLoad(false);
+    }
+    function render() {
       lookClass();
       if (look() === 'week') return drawWeek();
       if (look() === 'day') return drawDay();
@@ -3039,12 +3231,28 @@ import {
             dt.className = 'cdot';
             b.appendChild(dt);
           }
+          var me = macDay(key);
+          if (me.length) {
+            var dots = document.createElement('i');
+            dots.className = 'cme';
+            me.slice(0, 3).forEach(function (ev) {
+              var q = document.createElement('b');
+              q.style.background = macColour(ev);
+              dots.appendChild(q);
+            });
+            b.appendChild(dots);
+            b.title = (b.title ? b.title + '\n' : '') + me.map(macLabel).join('\n');
+            b.setAttribute('aria-label', b.getAttribute('aria-label') + '. ' + me.map(macLabel).join(', '));
+          }
           b.addEventListener('click', function (ev) {
             ev.stopPropagation();
             dayPop(b, key, lab);
           });
           gEl.appendChild(b);
           if (e && (e.t || e.e)) list.push([dd, e]);
+          me.forEach(function (ev) {
+            list.push([dd, null, ev]);
+          });
         })(dd);
       }
       list.slice(0, 5).forEach(function (x) {
@@ -3052,7 +3260,15 @@ import {
         var b = document.createElement('b');
         b.textContent = x[0];
         li.appendChild(b);
-        li.appendChild(document.createTextNode(' ' + (x[1].e ? x[1].e + ' ' : '') + (x[1].t || '')));
+        if (x[2]) {
+          // a Calendar event: its calendar's colour, then the time and title
+          var sw = document.createElement('i');
+          sw.className = 'cmc';
+          sw.style.background = macColour(x[2]);
+          li.appendChild(document.createTextNode(' '));
+          li.appendChild(sw);
+          li.appendChild(document.createTextNode(macLabel(x[2])));
+        } else li.appendChild(document.createTextNode(' ' + (x[1].e ? x[1].e + ' ' : '') + (x[1].t || '')));
         lEl.appendChild(li);
       });
       if (list.length > 5) {
@@ -3065,84 +3281,126 @@ import {
       fit();
     }
     function dayPop(b, key, lab) {
-      openPop(b, function (box, close) {
-        var e = Object.assign({ t: '', e: '', m: false }, c.days[key] || {});
-        function upd() {
-          if (e.t.trim() || e.e || e.m) c.days[key] = { t: e.t.trim().slice(0, 40), e: e.e, m: !!e.m };
-          else delete c.days[key];
-          save();
-          draw();
-        }
-        var h = document.createElement('h4');
-        h.textContent = lab;
-        box.appendChild(h);
-        var inp = document.createElement('input');
-        inp.type = 'text';
-        inp.className = 'lki';
-        inp.maxLength = 40;
-        inp.placeholder = 'what’s happening?';
-        inp.value = e.t;
-        inp.setAttribute('aria-label', 'What’s happening on ' + lab);
-        inp.addEventListener('input', function () {
-          e.t = inp.value;
-          upd();
-        });
-        inp.addEventListener('keydown', function (ev) {
-          if (ev.key === 'Enter') {
-            ev.preventDefault();
-            close();
+      openPop(
+        b,
+        function (box, close) {
+          var e = Object.assign({ t: '', e: '', m: false }, c.days[key] || {});
+          function upd() {
+            var prev = c.days[key];
+            if (e.t.trim() || e.e || e.m) {
+              var o = { t: e.t.trim().slice(0, 40), e: e.e, m: !!e.m };
+              if (e.tm) o.tm = e.tm; // v2.1: a time, for the Calendar event
+              if (prev && prev.ev) o.ev = prev.ev; // v2.1: the Calendar event this note made
+              c.days[key] = o;
+            } else delete c.days[key];
+            save();
+            draw();
+            if (c.mac) macSoon(key, !c.days[key] && prev && prev.ev);
           }
-        });
-        box.appendChild(inp);
-        var row = document.createElement('div');
-        row.className = 'cale';
-        row.setAttribute('role', 'radiogroup');
-        row.setAttribute('aria-label', 'Sticker for the day');
-        CAL_EMO.forEach(function (x) {
-          var q = document.createElement('button');
-          q.type = 'button';
-          q.textContent = x || '–';
-          q.setAttribute('role', 'radio');
-          q.setAttribute('aria-label', x || 'None');
-          function mark() {
-            var on = e.e === x;
-            q.className = on ? 'on' : '';
-            q.setAttribute('aria-checked', on ? 'true' : 'false');
+          var h = document.createElement('h4');
+          h.textContent = lab;
+          box.appendChild(h);
+          var me = macDay(key);
+          if (me.length) {
+            var evs = macLines('cpev', me, 8);
+            evs.title = 'From the Calendar app';
+            box.appendChild(evs);
           }
-          q._m = mark;
-          mark();
-          q.addEventListener('click', function () {
-            e.e = x;
+          var inp = document.createElement('input');
+          inp.type = 'text';
+          inp.className = 'lki';
+          inp.maxLength = 40;
+          inp.placeholder = 'what’s happening?';
+          inp.value = e.t;
+          inp.setAttribute('aria-label', 'What’s happening on ' + lab);
+          inp.addEventListener('input', function () {
+            e.t = inp.value;
             upd();
-            sfx.blip();
-            row.querySelectorAll('button').forEach(function (z) {
-              z._m();
-            });
           });
-          row.appendChild(q);
-        });
-        box.appendChild(row);
-        var tr = document.createElement('label');
-        tr.className = 'trow';
-        var tt = document.createElement('span');
-        tt.textContent = 'Circle this day';
-        var sw = document.createElement('input');
-        sw.type = 'checkbox';
-        sw.className = 'sw';
-        sw.checked = e.m;
-        sw.addEventListener('change', function () {
-          e.m = sw.checked;
-          upd();
-          if (e.m) sfx.tick();
-          else sfx.blip();
-        });
-        tr.appendChild(tt);
-        tr.appendChild(sw);
-        box.appendChild(tr);
-        setTimeout(function () {
-          inp.focus();
-        }, 0);
-      });
+          inp.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Enter') {
+              ev.preventDefault();
+              close();
+            }
+          });
+          box.appendChild(inp);
+          var row = document.createElement('div');
+          row.className = 'cale';
+          row.setAttribute('role', 'radiogroup');
+          row.setAttribute('aria-label', 'Sticker for the day');
+          CAL_EMO.forEach(function (x) {
+            var q = document.createElement('button');
+            q.type = 'button';
+            q.textContent = x || '–';
+            q.setAttribute('role', 'radio');
+            q.setAttribute('aria-label', x || 'None');
+            function mark() {
+              var on = e.e === x;
+              q.className = on ? 'on' : '';
+              q.setAttribute('aria-checked', on ? 'true' : 'false');
+            }
+            q._m = mark;
+            mark();
+            q.addEventListener('click', function () {
+              e.e = x;
+              upd();
+              sfx.blip();
+              row.querySelectorAll('button').forEach(function (z) {
+                z._m();
+              });
+            });
+            row.appendChild(q);
+          });
+          box.appendChild(row);
+          var tr = document.createElement('label');
+          tr.className = 'trow';
+          var tt = document.createElement('span');
+          tt.textContent = 'Circle this day';
+          var sw = document.createElement('input');
+          sw.type = 'checkbox';
+          sw.className = 'sw';
+          sw.checked = e.m;
+          sw.addEventListener('change', function () {
+            e.m = sw.checked;
+            upd();
+            if (e.m) sfx.tick();
+            else sfx.blip();
+          });
+          tr.appendChild(tt);
+          tr.appendChild(sw);
+          box.appendChild(tr);
+          if (c.mac) {
+            // v2.1: an optional time; without one the Calendar event is all-day
+            var tmr = document.createElement('label');
+            tmr.className = 'trow';
+            var tml = document.createElement('span');
+            tml.textContent = 'Time (optional)';
+            var tmi = document.createElement('input');
+            tmi.type = 'time';
+            tmi.className = 'ctime';
+            tmi.value = e.tm || '';
+            tmi.setAttribute('aria-label', 'Time on ' + lab);
+            tmi.addEventListener('change', function () {
+              if (/^\d{2}:\d{2}$/.test(tmi.value)) e.tm = tmi.value;
+              else delete e.tm;
+              upd();
+            });
+            tmr.appendChild(tml);
+            tmr.appendChild(tmi);
+            box.appendChild(tmr);
+            var hn = document.createElement('p');
+            hn.className = 'phint';
+            hn.textContent = 'What you write here is added to the Calendar app too.';
+            box.appendChild(hn);
+          }
+          setTimeout(function () {
+            inp.focus();
+          }, 0);
+        },
+        function () {
+          if (macT[key]) macSoon(key, null, true); // closing: send it now
+        }
+      );
     }
     function month(dir) {
       var L = look();
@@ -3217,6 +3475,168 @@ import {
         }
       );
     });
+    if (macSupported())
+      el.querySelector('.cmac').addEventListener('click', function (e) {
+        e.stopPropagation();
+        openPop(this, function (box) {
+          var h = document.createElement('h4');
+          h.textContent = 'Calendar app';
+          box.appendChild(h);
+          var body = document.createElement('div');
+          body.className = 'cmacp';
+          box.appendChild(body);
+          function hint(t) {
+            var q = document.createElement('p');
+            q.className = 'phint';
+            q.textContent = t;
+            body.appendChild(q);
+          }
+          function toggle(text, on, change) {
+            var tr = document.createElement('label');
+            tr.className = 'trow';
+            var tt = document.createElement('span');
+            tt.textContent = text;
+            var sw = document.createElement('input');
+            sw.type = 'checkbox';
+            sw.className = 'sw';
+            sw.checked = on;
+            sw.addEventListener('change', function () {
+              change(sw);
+            });
+            tr.appendChild(tt);
+            tr.appendChild(sw);
+            body.appendChild(tr);
+            return sw;
+          }
+          async function fill(fresh) {
+            var inf = await macInfo(fresh);
+            body.textContent = '';
+            if (!inf.available) {
+              hint('The link to the Calendar app isn\u2019t available on this Mac.');
+              return;
+            }
+            var on = !!c.mac && inf.status === 'authorized';
+            toggle('Show events from the Calendar app', on, async function (sw) {
+              if (!sw.checked) {
+                delete c.mac;
+                save();
+                sfx.blip();
+                draw();
+                fill();
+                return;
+              }
+              var st = inf.status;
+              if (st === 'notDetermined')
+                st = await macRequest().catch(function () {
+                  return 'denied';
+                });
+              if (st !== 'authorized') {
+                sw.checked = false;
+                fill(true);
+                return;
+              }
+              c.mac = true;
+              save();
+              sfx.blip();
+              draw();
+              fill();
+            });
+            if (inf.status !== 'authorized' && inf.status !== 'notDetermined') {
+              hint(
+                'Corkboard isn\u2019t allowed to see your calendars. Allow it in System Settings \u2192 Privacy & Security \u2192 Calendars.'
+              );
+              var ob = document.createElement('button');
+              ob.type = 'button';
+              ob.className = 'sbtn alt';
+              ob.textContent = 'Open Privacy Settings';
+              ob.addEventListener('click', function () {
+                macPrivacy().catch(function () {});
+              });
+              body.appendChild(ob);
+            }
+            if (on) {
+              var cals = [];
+              try {
+                cals = await macCalendars();
+              } catch (err) {}
+              if (cals.length) {
+                var h5 = document.createElement('h5');
+                h5.textContent = 'Calendars';
+                body.appendChild(h5);
+              }
+              var mine = cals.filter(function (q) {
+                return q.writable !== false;
+              });
+              if (mine.length) {
+                // v2.1: where day notes go (c.macTo; the Calendar app's default calendar if not chosen)
+                var tr2 = document.createElement('label');
+                tr2.className = 'trow';
+                var t2 = document.createElement('span');
+                t2.textContent = 'Add notes to';
+                var sel = document.createElement('select');
+                sel.className = 'ssel';
+                mine.forEach(function (q) {
+                  var o = document.createElement('option');
+                  o.value = q.id;
+                  o.textContent = q.title + (q.source ? ' (' + q.source + ')' : '');
+                  sel.appendChild(o);
+                });
+                var dflt = (
+                  mine.filter(function (q) {
+                    return q.default;
+                  })[0] || mine[0]
+                ).id;
+                sel.value = mine.some(function (q) {
+                  return q.id === c.macTo;
+                })
+                  ? c.macTo
+                  : dflt;
+                sel.addEventListener('change', function () {
+                  if (sel.value === dflt) delete c.macTo;
+                  else c.macTo = sel.value;
+                  save();
+                  sfx.blip();
+                });
+                tr2.appendChild(t2);
+                tr2.appendChild(sel);
+                body.appendChild(tr2);
+              }
+              cals.forEach(function (cal) {
+                var row = document.createElement('label');
+                row.className = 'cmrow';
+                var cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.checked = c.mac === true || c.mac.indexOf(cal.id) >= 0;
+                var sw = document.createElement('i');
+                sw.style.background = /^#[0-9a-f]{6}$/i.test(cal.color) ? cal.color : '#8a8178';
+                var nm = document.createElement('span');
+                nm.textContent = cal.title;
+                var src = document.createElement('small');
+                src.textContent = cal.source;
+                cb.addEventListener('change', function () {
+                  var ids = [];
+                  body.querySelectorAll('.cmrow input').forEach(function (q, i) {
+                    if (q.checked) ids.push(cals[i].id);
+                  });
+                  c.mac = ids.length === cals.length ? true : ids;
+                  save();
+                  sfx.blip();
+                  draw();
+                });
+                row.appendChild(cb);
+                row.appendChild(sw);
+                row.appendChild(nm);
+                row.appendChild(src);
+                body.appendChild(row);
+              });
+            }
+            hint(
+              'Notes you write on this card\u2019s days are added to the Calendar app too; changing or removing a note changes or removes that event. Other events are only shown, never changed. To see a Google calendar here, add your Google account in System Settings \u2192 Internet Accounts.'
+            );
+          }
+          fill(false);
+        });
+      });
     el.querySelector('.dot').addEventListener('click', function (e) {
       e.stopPropagation();
       sfx.blip();
@@ -3238,7 +3658,27 @@ import {
     pinUp(el, c); // v2.0: no longer stretched; pick a look instead
     return el;
   }
+  // v2.1: Calendar events are fetched again when the window comes back to the front, and every few minutes
+  function macRefresh() {
+    var cs = document.querySelectorAll('#layer .card.cal');
+    if (
+      !Array.prototype.some.call(cs, function (e) {
+        return e._p && e._p.mac;
+      })
+    )
+      return;
+    macInfo(true);
+    cs.forEach(function (e) {
+      if (e._macLoad) e._macLoad(true);
+    });
+  }
+  window.addEventListener('focus', macRefresh);
+  setInterval(macRefresh, 5 * 60 * 1000);
   function cleanCal(n) {
+    var mc = cleanMacChoice(n.mac); // v2.1
+    if (mc === undefined) delete n.mac;
+    else n.mac = mc;
+    if (typeof n.macTo !== 'string' || !n.macTo || n.macTo.length > 300) delete n.macTo;
     if (
       n.look != null &&
       !CAL_LOOKS.some(function (x) {
@@ -3260,6 +3700,8 @@ import {
           e: CAL_EMO.indexOf(e.e) >= 0 ? e.e : '',
           m: !!e.m
         };
+        if (typeof e.tm === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(e.tm)) o.tm = e.tm; // v2.1
+        if (typeof e.ev === 'string' && e.ev && e.ev.length <= 500) o.ev = e.ev; // v2.1: its Calendar event
         if (o.t || o.e || o.m) d[k] = o;
       });
     n.days = d;

@@ -1,7 +1,7 @@
 {
   "name": "corkboard",
   "productName": "Corkboard",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Corkboard: a cosy photo and notes board that saves into a folder you choose.",
   "author": "Corkboard",
   "license": "UNLICENSED",
@@ -10,7 +10,7 @@
   "scripts": {
     "vendor": "node scripts/vendor.js",
     "build:renderer": "node scripts/build-renderer.js",
-    "prepare:app": "node scripts/vendor.js && node scripts/build-renderer.js",
+    "prepare:app": "node scripts/vendor.js && node scripts/build-calendar-helper.js && node scripts/build-renderer.js",
     "dev": "npm run prepare:app && electron .",
     "watch": "node scripts/build-renderer.js --watch",
     "pretest": "npm run prepare:app",

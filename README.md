@@ -46,6 +46,10 @@ xattr -dr com.apple.quarantine /Applications/Corkboard.app
   - The **rotate** handle tilts a note or card; double-click it to straighten.
   - Drag the **bottom edge** of a note or card to make it longer or shorter; double-click the edge to reset.
 - **Calendars:** the calendar button on a calendar picks its look: **Month**, **Wide month**, **Mini month**, **Week** or **Tear-off day**.
+  - **Your Calendar app's events:** the second button on a calendar card shows events from the Mac's Calendar app on it. The first time, macOS asks whether Corkboard may see your calendars. Pick which calendars to show; they update when you come back to the window.
+  - **Notes go to Calendar too:** on a card that shows Calendar events, what you write on a day is added to the Calendar app as an event: all-day, or an hour long if you give it a time. Pick which calendar with **Add notes to**. Changing or removing the note changes or removes that event; events made in the Calendar app itself are never changed.
+  - **Google Calendar:** add your Google account in **System Settings → Internet Accounts**, and its calendars appear in the Calendar app and on your board.
+  - Changed your mind about access? **System Settings → Privacy & Security → Calendars**.
 - **Photos:** "add a caption" only shows while you point at a photo or video.
 - **Pins:** polaroids and photo strips have no pin; stick one in with pins and yarn if you like. Calendars come with a real pin you can move, recolour or remove.
 - **Tilt:** the **rotate** handle tilts polaroids and photo strips too; double-click it to straighten.

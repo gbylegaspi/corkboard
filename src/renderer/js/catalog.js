@@ -87,7 +87,7 @@ export const TODO_MAX = 60,
   NOTE_MAX = 1000;
 
 // ---- settings panel ----
-export const VERSION = 'v2.0.1';
+export const VERSION = 'v2.1.0';
 
 // pv = small preview of each theme's texture for the theme picker
 export const THEMES = [

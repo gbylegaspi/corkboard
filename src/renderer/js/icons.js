@@ -17,6 +17,9 @@ export const IC = (function () {
     vplay: sv('<path d="M8 5.5v13l10.5-6.5z"/>'),
     vpause: sv('<path d="M8 5.5v13M16 5.5v13"/>'),
     vopt: sv('<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/>'),
+    calapp: sv(
+      '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="12" cy="15" r="2.2" fill="currentColor"/>'
+    ),
     callook: sv(
       '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2"/>'
     ),

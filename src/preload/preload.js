@@ -50,6 +50,17 @@ contextBridge.exposeInMainWorld('corkNative', {
   reveal: root => call('cork:reveal', root),
   // v2.0: the board's layout width (null the first time); the window scales the page to fit it, and says which width it used
   boardWidth: bw => call('cork:boardWidth', bw),
+  // v2.1: the Mac's Calendar app, read-only (info → { available, status }; status: notDetermined, authorized, denied, …)
+  calInfo: () => call('cork:calInfo'),
+  calRequest: () => call('cork:calRequest'),
+  calCalendars: () => call('cork:calCalendars'),
+  calEvents: (from, to, ids) => call('cork:calEvents', from, to, ids),
+  // day notes on a linked card become Calendar events (only those events are ever changed or removed)
+  calAdd: ev => call('cork:calAdd', ev),
+  calUpdate: (eid, ev) => call('cork:calUpdate', eid, ev),
+  calRemove: eid => call('cork:calRemove', eid),
+  calLog: msg => call('cork:calLog', msg),
+  calSettings: () => call('cork:calSettings'),
   // menus and window events from the main process
   on: (name, fn) => {
     const ok = ['flush', 'menu'];

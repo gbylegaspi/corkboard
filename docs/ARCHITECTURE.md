@@ -22,7 +22,8 @@ Corkboard is an [Electron](https://www.electronjs.org/) app: a web page (the boa
 
 | Path | What's there |
 | --- | --- |
-| `src/main/` | Main process: window, protocols, IPC handlers (`main.js`), board folder access (`storage.js`), menus, recent boards and window state (`config.js`), update check, HEIC → JPEG in a worker thread |
+| `src/main/` | Main process: window, protocols, IPC handlers (`main.js`), board folder access (`storage.js`), menus, recent boards and window state (`config.js`), update check, HEIC → JPEG in a worker thread, the Calendar app link (`calendar.js`) |
+| `native/calendar/` | `corkcal`, a small Swift command-line helper that reads the Calendar app with EventKit. Built into `build/bin/corkcal` (universal, ad-hoc signed) by `scripts/build-calendar-helper.js` and packaged as `Contents/Resources/bin/corkcal` |
 | `src/preload/` | The page's only bridge to the main process (`window.corkNative`) |
 | `src/renderer/index.html`, `app.css` | The page's markup and styles |
 | `src/renderer/js/` | The board's code, as ES modules (see below). Bundled by esbuild into `src/renderer/build/app.js` (not committed) |
@@ -42,6 +43,7 @@ Corkboard is an [Electron](https://www.electronjs.org/) app: a web page (the boa
 | `templates.js` | Built-in section templates | `catalog`, `util` |
 | `richtext.js` | Rich text as data (`[{t, u?, b?, i?}]`) and reading/writing it from editable elements | `catalog`, `util` |
 | `sound.js` | Synthesised sound effects (Web Audio), on/off and volume | nothing |
+| `maccal.js` | Events from the Mac's Calendar app for calendar cards: access, fetching, grouping by day | `util`, `window.corkNative` |
 | `icons.js` | The icon set and card button markup | nothing |
 | `util.js` | Ids, dates, colours, URLs, SVG helpers | nothing |
 
@@ -54,7 +56,7 @@ One JSON object. Fields added in later versions are optional, so older boards op
 - `sections`: `[{id, name, parent?, fold?, theme?}]`. A flat list; `parent` nests a section inside another (any depth), order among siblings is list order.
 - `cur`: the open section's id.
 - `photos`: polaroids, videos, strips, stickers and PDFs, by `kind` (`photo` or missing, `video`, `strip`, `sticker`, `doc`). Common: `id`, `file` (or `files` for a strip), `s` (section id, or `"shelf"`), `x` (share of the layout width), `y` (px), `rot`, `z`, `sc` (size), `caption`, `f` (filters). Kind-specific: `mode`, `ar`, `bare`/`hold`, `font`, `pile`/`po`/`fan` (stacks), `play`/`snd` (videos), `n`/`pg` (PDF pages), `fin` (sticker finish).
-- `notes`: sticky notes (no `kind`), to-do lists (`todo`: `items [{t, d, rt?}]`), index cards (`idx`), calendars (`cal`: `ym`, `days {date: {t, e, m}}`, `look`, `dy`). Text is `text` plus `rt` when formatted. `hs` makes notes and cards longer or shorter.
+- `notes`: sticky notes (no `kind`), to-do lists (`todo`: `items [{t, d, rt?}]`), index cards (`idx`), calendars (`cal`: `ym`, `days {date: {t, e, m}}`, `look`, `dy`, `mac`: `true` or a list of Calendar app calendar ids, `macTo`: where day notes go; a day note's `tm` and `ev` are its time and the Calendar event it made; Calendar events themselves are never saved). Text is `text` plus `rt` when formatted. `hs` makes notes and cards longer or shorter.
 - `labels`, `stickers` (the sticker library), `templates` (her own).
 - `pins`: `{id, c}` plus either `{s, x, y}` (on the board) or `{card, ox, oy, fx?}` (stuck in a card). `yarns`: `{id, a, b, c}` ties two pins.
 - Settings: `theme`, `custom`, `style`, `wallpaper`, `sound`, `volume`, `dangle`, `hover`, `spell`, `video`, `zoom`, `yarnCol`.
@@ -82,7 +84,7 @@ Conventions:
 
 ## Testing
 
-`tests/` uses Playwright's Electron support to launch the real app with its own temporary profile (`CORK_USER_DATA`) and a temporary board, then clicks, drags and types like a person and checks both the screen and `board.json`. Dialogs and `shell` are stubbed in the main process. `CORK_APP_EXE=…/Corkboard.app/Contents/MacOS/Corkboard npm test` runs the same tests against a packaged build. Fixture photos, videos and PDFs are generated (`tests/fixtures.js`, `tests/tools/`), not committed.
+`tests/` uses Playwright's Electron support to launch the real app with its own temporary profile (`CORK_USER_DATA`) and a temporary board, then clicks, drags and types like a person and checks both the screen and `board.json`. Dialogs and `shell` are stubbed in the main process. `CORK_APP_EXE=…/Corkboard.app/Contents/MacOS/Corkboard npm test` runs the same tests against a packaged build. Fixture photos, videos and PDFs are generated (`tests/fixtures.js`, `tests/tools/`), not committed. The Calendar app is played by `tests/tools/fake-corkcal.js` (`CORK_CAL_HELPER`), since real calendar access needs a person to click Allow.
 
 Every change keeps all tests passing; new features get a test file per version (`16-v17`, `17-v18`, `18-v20`, …).
 
@@ -93,6 +95,16 @@ Every change keeps all tests passing; new features get a test file per version (
 3. Commit and push, then `gh release create vX.Y.Z dist/Corkboard-X.Y.Z-mac-universal.dmg` with notes. **Help → Check for Updates** reads GitHub's latest release.
 
 Builds are ad-hoc signed; see `SIGNING.md` for a Developer ID or the Mac App Store.
+
+## The Calendar app link
+
+Calendar cards can show events from the Mac's Calendar app (and so from any account added to the Mac, such as Google). Electron can't use EventKit, so the main process runs `corkcal` (`native/calendar/main.swift`) for each request and reads the JSON it prints: `status`, `request` (shows macOS's permission prompt), `calendars`, `events <from> <to> [ids]`, and `add`, `update <eid>`, `remove <eid>`. Nothing leaves the Mac.
+
+On a linked card, day notes are written to Calendar as events (`maccal.js` → `writeNote`): all-day, or an hour from the note's `tm`. The event's id is kept on the note (`days[date].ev`), so changing or removing the note changes or removes exactly that event, and the card doesn't show it twice. Corkboard never changes events it didn't make. New events go to `macTo`, or the Calendar app's default calendar.
+
+- macOS attributes the permission to Corkboard (the helper runs from inside the app), using the `NSCalendars…UsageDescription` texts in `electron-builder.yml`. In `npm run dev` the request belongs to Electron's own app, which has no such text, so try the real prompt in a packaged build.
+- With ad-hoc signing, macOS may ask again after an update; a Developer ID signature keeps the permission.
+- Intel Macs need macOS 13 for the helper (the Swift tools no longer link Intel code for macOS 12); there, the button says the link isn't available.
 
 ## Where the code is heading
 

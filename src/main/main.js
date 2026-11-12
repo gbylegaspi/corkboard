@@ -11,6 +11,7 @@ const config = require('./config');
 const menu = require('./menu');
 const heic = require('./heic');
 const updates = require('./updates');
+const calendar = require('./calendar');
 
 const APP_ORIGIN = 'app://corkboard';
 const RENDERER = path.join(__dirname, '..', 'renderer');
@@ -199,6 +200,19 @@ handle('cork:opened', (e, root) => {
   current = root;
   refreshMenu();
 });
+// v2.1: the Mac's Calendar app (read-only), shown on calendar cards
+handle('cork:calInfo', () => calendar.info());
+handle('cork:calRequest', () => calendar.request());
+handle('cork:calCalendars', () => calendar.calendars());
+handle('cork:calEvents', (e, from, to, ids) => calendar.events(from, to, ids));
+handle('cork:calAdd', (e, ev) => calendar.add(ev));
+handle('cork:calUpdate', (e, eid, ev) => calendar.update(eid, ev));
+handle('cork:calRemove', (e, eid) => calendar.remove(eid));
+handle('cork:calLog', (e, msg) => calendar.log('page: ' + String(msg).slice(0, 300)));
+handle('cork:calSettings', () =>
+  shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars')
+);
+
 // v2.0: a board keeps the same layout on any screen. It's laid out at a fixed width (board.json "bw", set from the window's
 // width the first time 2.0 opens it), and the page is scaled to fit the window: the same layout, just bigger or smaller.
 const BW_MIN = 600,

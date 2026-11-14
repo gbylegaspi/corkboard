@@ -66,7 +66,27 @@ export const LABEL_MAX = 40;
 export const WORD_MSG = 'Word files need saving as a PDF first: in Word choose File → Save As → PDF, then add the PDF';
 
 // ---- v1.3: wall calendar (kept with the notes as kind:'cal'; days: {'2026-11-14':{t:'text',e:'emoji',m:true}}) ----
-export const CAL_COLS = ['#c8312f', '#2456b5', '#2c7a4b', '#d0457f', '#6a43b0', '#d9822b', '#35312c'];
+// calendar colours (v2.1.1: more of them, plus any colour from the picker); the first is the default
+export const CAL_COLS = [
+  '#c8312f',
+  '#e8665a',
+  '#d9822b',
+  '#e0a526',
+  '#8a9a2c',
+  '#2c7a4b',
+  '#3f9f86',
+  '#1f7f86',
+  '#3a8fd6',
+  '#2456b5',
+  '#23395b',
+  '#6a43b0',
+  '#9d7bd8',
+  '#d0457f',
+  '#e58fa4',
+  '#8a5a34',
+  '#5b6470',
+  '#35312c'
+];
 
 export const CAL_EMO = ['', '❤️', '🎂', '🎉', '✈️', '⭐', '🌸', '🍽️', '📌'];
 
@@ -87,7 +107,7 @@ export const TODO_MAX = 60,
   NOTE_MAX = 1000;
 
 // ---- settings panel ----
-export const VERSION = 'v2.1.0';
+export const VERSION = 'v2.1.1';
 
 // pv = small preview of each theme's texture for the theme picker
 export const THEMES = [

@@ -23,6 +23,8 @@
   <button class="btn alt" id="stkBtn" title="Add stickers (PNG, WebP or GIF with a transparent background)">+ Sticker</button>
   <button class="btn alt" id="stripBtn" title="Pick 4 photos to make a photobooth strip">+ <span class="lg">Photobooth</span><span class="sm">Strip</span></button>
   <button class="btn" id="addBtn" title="Add photos, videos or PDF documents">+ Photos<span class="lg"> &amp; more</span></button>
+  <!-- v2.1.1: pins and yarn sit next to "+ Add" -->
+  <button class="tbtn yfab" id="yarnBtn" aria-pressed="false" title="Pins and yarn: stick pins in and tie them together"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><path d="M6.5 8.5c3 1 8 1 11-1M5 12.5c4 1.5 10 1.5 14-.5M6.5 16.5c3 .8 8 .5 11-1.5"/><path d="M19 17l3 4"/></svg></button>
   <button class="btn addmain" id="addMain" aria-haspopup="menu" aria-expanded="false" title="Add something to the board"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add</span></button>
 </div>
 <input type="file" id="file" accept="image/*,video/*,application/pdf,.pdf,.docx,.doc" multiple hidden>
@@ -68,7 +70,6 @@
 </defs></svg>
 <div class="lfab" id="lfab" role="toolbar" aria-label="Board tools" style="display:none">
 <button class="tbtn gear" id="gear" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
-<button class="tbtn" id="yarnBtn" aria-pressed="false" title="Pins and yarn: stick pins in and tie them together"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><path d="M6.5 8.5c3 1 8 1 11-1M5 12.5c4 1.5 10 1.5 14-.5M6.5 16.5c3 .8 8 .5 11-1.5"/><path d="M19 17l3 4"/></svg></button>
 <i class="tsep" aria-hidden="true"></i><div class="zm" role="group" aria-label="Zoom"><button id="zmOut" title="Zoom out (or Ctrl + scroll)" aria-label="Zoom out">&minus;</button><button id="zmN" title="Back to 100%" aria-label="Reset zoom">100%</button><button id="zmIn" title="Zoom in" aria-label="Zoom in" disabled>+</button></div>
 </div>
 <!-- v1.8: sections live in a sidebar that slides in from the left; the button at the top left opens it -->
@@ -89,27 +90,25 @@
       <button role="tab" data-pane="board" id="tb-board" aria-controls="pn-board">Board</button>
     </div>
     <div class="spane" id="pn-general" role="tabpanel" aria-labelledby="tb-general">
+      <!-- v2.1.1: each group is one panel of rows: the setting on the left (a short hint under it), its control on the right -->
       <section class="sgrp">
         <h3>Sound</h3>
         <label class="trow"><span>Sound effects</span><input type="checkbox" class="sw" id="sndOn"></label>
-        <div class="vrow"><input type="range" id="vol" min="0" max="100" step="1" aria-label="Sound effects volume"><output id="volN" for="vol">80%</output></div>
+        <div class="vrow"><span class="vlab">Volume</span><input type="range" id="vol" min="0" max="100" step="1" aria-label="Sound effects volume"><output id="volN" for="vol">80%</output></div>
       </section>
       <section class="sgrp">
         <h3>Motion</h3>
-        <label class="trow"><span>Polaroids dangle when moved</span><input type="checkbox" class="sw" id="dangleOn"></label>
-        <label class="trow"><span>Cards lift and straighten when you point at them</span><input type="checkbox" class="sw" id="hoverOn"></label>
-        <p class="shint2">Turn this off to line things up precisely.</p>
+        <label class="trow"><span>Lift when pointed at<small>Turn off to line things up precisely.</small></span><input type="checkbox" class="sw" id="hoverOn"></label>
+        <label class="trow"><span>Swing when moved<small>Pinned photos and calendars sway a little as you drag them.</small></span><input type="checkbox" class="sw" id="dangleOn"></label>
       </section>
       <section class="sgrp">
         <h3>Videos</h3>
-        <label class="trow"><span>Play videos</span><select id="vidPlay" class="ssel"><option value="hover">When you point at them</option><option value="always">Always</option><option value="click">Only when you press play</option></select></label>
-        <label class="trow"><span>With sound</span><input type="checkbox" class="sw" id="vidSnd"></label>
-        <p class="shint2">Each video can have its own choice too: the speaker button on the video.</p>
+        <label class="trow"><span>Play</span><select id="vidPlay" class="ssel"><option value="hover">When you point at them</option><option value="always">Always</option><option value="click">Only when you press play</option></select></label>
+        <label class="trow"><span>With sound<small>The speaker button on a video sets that video on its own.</small></span><input type="checkbox" class="sw" id="vidSnd"></label>
       </section>
       <section class="sgrp">
-        <h3>Typing</h3>
-        <label class="trow"><span>Check spelling</span><input type="checkbox" class="sw" id="spellOn"></label>
-        <p class="shint2">Misspelled words are underlined. Right-click one for suggestions.</p>
+        <h3>Spelling</h3>
+        <label class="trow"><span>Check spelling<small>Right-click an underlined word for suggestions.</small></span><input type="checkbox" class="sw" id="spellOn"></label>
       </section>
     </div>
     <div class="spane" id="pn-theme" role="tabpanel" aria-labelledby="tb-theme" hidden>
@@ -125,10 +124,7 @@
       </section>
     </div>
     <div class="spane" id="pn-cards" role="tabpanel" aria-labelledby="tb-cards" hidden>
-      <section class="sgrp">
-        <h3>Card style</h3>
-        <div id="styleBox"></div>
-      </section>
+      <div id="styleBox"></div>
     </div>
     <div class="spane" id="pn-board" role="tabpanel" aria-labelledby="tb-board" hidden>
       <section class="sgrp">
@@ -137,12 +133,13 @@
       </section>
       <section class="sgrp">
         <h3>Templates</h3>
-        <p class="shint2">Start a new section from a ready-made layout, or save one of yours to reuse. (&ldquo;+ Section&rdquo; opens this too.)</p>
+        <p class="shint2">Ready-made layouts for new sections, and the ones you&rsquo;ve saved. &ldquo;New section&rdquo; in the sidebar opens them too.</p>
         <button class="sbtn alt" id="tplBtn">Templates&hellip;</button>
       </section>
       <section class="sgrp">
         <h3>Storage</h3>
-        <button class="sbtn alt" id="showFolder">Show folder&hellip;</button>
+        <p class="shint2">Your board is a normal folder on your Mac: photos, notes and layout. Back it up to keep everything safe.</p>
+        <button class="sbtn alt" id="showFolder">Show in Finder</button>
       </section>
     </div>
     <div class="about" id="about"></div>

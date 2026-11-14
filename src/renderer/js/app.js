@@ -2900,6 +2900,7 @@ import {
     function colour() {
       el.style.setProperty('--cc', c.c);
       el.style.setProperty('--pal', c.c);
+      el.style.setProperty('--cci', lum(c.c) > 0.6 ? '#2a2622' : '#ffffff'); // header text stays readable on light colours
     }
     var wd = el.querySelector('.calw');
     for (var i = 0; i < 7; i++) {
@@ -3154,7 +3155,7 @@ import {
     }
     function drawDay() {
       var d = dayOf();
-      mEl.textContent = d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+      mEl.textContent = d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }); // (the tear-off page is narrow)
       gEl.innerHTML = '';
       lEl.innerHTML = '';
       lEl.hidden = true;
@@ -3200,6 +3201,15 @@ import {
         now = new Date(),
         today = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
       mEl.textContent = first.toLocaleDateString(undefined, { month: mini ? 'short' : 'long', year: 'numeric' });
+      // v2.1.1: a long month name that doesn't fit becomes its short form, rather than being cut off (checked once the
+      // card is on the board and laid out)
+      if (!mini) {
+        var longName = mEl.textContent;
+        requestAnimationFrame(function () {
+          if (mEl.textContent === longName && mEl.scrollWidth > mEl.clientWidth + 1)
+            mEl.textContent = first.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+        });
+      }
       gEl.innerHTML = '';
       lEl.innerHTML = '';
       var list = [];
@@ -3637,12 +3647,60 @@ import {
           fill(false);
         });
       });
+    // v2.1.1: a palette (and any colour from the picker) instead of stepping through a few
     el.querySelector('.dot').addEventListener('click', function (e) {
       e.stopPropagation();
-      sfx.blip();
-      c.c = CAL_COLS[(CAL_COLS.indexOf(c.c) + 1) % CAL_COLS.length];
-      colour();
-      save();
+      openPop(this, function (box) {
+        var h = document.createElement('h4');
+        h.textContent = 'Calendar colour';
+        box.appendChild(h);
+        var grid = document.createElement('div');
+        grid.className = 'calsw';
+        grid.setAttribute('role', 'radiogroup');
+        grid.setAttribute('aria-label', 'Calendar colour');
+        function mark() {
+          grid.querySelectorAll('button').forEach(function (b) {
+            var on = b.dataset.c === c.c;
+            b.classList.toggle('on', on);
+            b.setAttribute('aria-checked', on ? 'true' : 'false');
+          });
+        }
+        function pick(v) {
+          c.c = v;
+          colour();
+          save();
+          mark();
+        }
+        CAL_COLS.forEach(function (v) {
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.dataset.c = v;
+          b.style.background = v;
+          b.setAttribute('role', 'radio');
+          b.setAttribute('aria-label', 'Colour ' + v);
+          b.addEventListener('click', function () {
+            sfx.blip();
+            pick(v);
+          });
+          grid.appendChild(b);
+        });
+        box.appendChild(grid);
+        var row = document.createElement('label');
+        row.className = 'trow';
+        var t = document.createElement('span');
+        t.textContent = 'Custom colour';
+        var ci = document.createElement('input');
+        ci.type = 'color';
+        ci.value = c.c;
+        ci.setAttribute('aria-label', 'Custom calendar colour');
+        ci.addEventListener('input', function () {
+          pick(ci.value.toLowerCase());
+        });
+        row.appendChild(t);
+        row.appendChild(ci);
+        box.appendChild(row);
+        mark();
+      });
     });
     armDel(el.querySelector('.del'), 'Remove?', function () {
       data.notes = data.notes.filter(function (q) {
@@ -3689,7 +3747,9 @@ import {
     if (n.dy != null && !/^\d{4}-\d{2}-\d{2}$/.test(n.dy)) delete n.dy;
     delete n.hs; // v2.0: calendars aren't stretched any more
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(n.ym || '')) n.ym = ymNow();
-    if (CAL_COLS.indexOf(n.c) < 0) n.c = CAL_COLS[0];
+    if (!HEX.test(n.c || ''))
+      n.c = CAL_COLS[0]; // v2.1.1: any colour
+    else n.c = n.c.toLowerCase();
     var d = {};
     if (n.days && typeof n.days === 'object')
       Object.keys(n.days).forEach(function (k) {
@@ -3942,6 +4002,9 @@ import {
   }
   // the stack controls on a card (next card, spread / stack again / unstack, move the whole stack); returns the drag hooks
   function stackCard(el, n) {
+    // the "3 cards" badge belongs to the card itself (on photos the buttons sit inside the photo area)
+    var pc = el.querySelector('.pcount');
+    if (pc && pc.parentNode !== el) el.appendChild(pc);
     el.querySelector('.pflip').addEventListener('click', function (e) {
       e.stopPropagation();
       if (!n.pile || n.fan) return;
@@ -5825,8 +5888,18 @@ import {
     s.setProperty('--pal', 'conic-gradient(' + c[0] + ' 0 25%,' + c[1] + ' 0 50%,' + c[2] + ' 0 75%,' + c[3] + ' 0)');
   }
   function renderStyle() {
-    var box = document.getElementById('styleBox');
-    box.innerHTML = '';
+    var root = document.getElementById('styleBox'),
+      box = root;
+    root.innerHTML = '';
+    // v2.1.1: grouped like the other tabs (Photos, Sticky notes, Text)
+    function group(title) {
+      box = document.createElement('section');
+      box.className = 'sgrp';
+      var h = document.createElement('h3');
+      h.textContent = title;
+      box.appendChild(h);
+      root.appendChild(box);
+    }
     function swatches(label, list, key) {
       var l = document.createElement('div');
       l.className = 'stl';
@@ -5877,11 +5950,14 @@ import {
       row.appendChild(c);
       box.appendChild(row);
     }
-    swatches('Polaroid & strip frame', FRAMES, 'frame');
-    swatches('Colour of new photo pins', PINS, 'pin');
+    group('Photos');
+    swatches('Frame colour', FRAMES, 'frame');
+    group('Calendars');
+    swatches('Pin colour for new calendars', PINS, 'pin');
+    group('Sticky notes');
     var l = document.createElement('div');
     l.className = 'stl';
-    l.textContent = 'Sticky note colours (for new notes and the colour dot)';
+    l.textContent = 'Colour set (new notes, and the colour button)';
     box.appendChild(l);
     var row = document.createElement('div');
     row.className = 'swr';
@@ -5947,9 +6023,10 @@ import {
       });
       box.appendChild(sg);
     }
-    segRow('Caption & label font (cards can pick their own)', [{ id: 'auto', name: 'Default' }].concat(FONTS), 'font');
+    group('Text');
+    segRow('Captions and labels (each card can pick its own)', [{ id: 'auto', name: 'Default' }].concat(FONTS), 'font');
     segRow(
-      'Look for new labels',
+      'New labels look like',
       LOOKS.map(function (L) {
         return { id: L.id, name: L.name };
       }),

@@ -483,7 +483,11 @@ input.tab {
 .ph {
   position: relative;
   container-type: inline-size;
-  --bs: clamp(22px, min((100cqi - 22px)/2, (100cqi / var(--ar, 1) - 22px)/2), var(--bmax));
+  --bs: clamp(
+    12px,
+    min((100cqi - 2 * var(--bi, 6px) - 3 * var(--bg, 4px)) / 4, (100cqi / var(--ar, 1) - 22px)/2),
+    var(--bmax)
+  ); /* v2.1.1: up to 4 buttons in a row */
 }
 /* card buttons: sit inside the card's edges, revealed on hover (after the card settles) or keyboard focus */
 .card {
@@ -1986,17 +1990,21 @@ input.tab {
 }
 .cb.frm {
   top: var(--bi);
-  left: calc(var(--bi) + var(--bs, 32px) + 4px);
+  left: calc(var(--bi) + var(--bs, 32px) + var(--bg, 4px));
 }
 .cb.font {
-  left: calc(var(--bi) + var(--bs, 32px) + 4px);
+  left: calc(var(--bi) + var(--bs, 32px) + var(--bg, 4px));
   bottom: var(--bi);
 }
 .strip .cb.font {
   left: var(--bi);
 }
 .card:not(.strip):not(.film) > .ph {
-  --bs: clamp(22px, min((100cqi - 30px)/3, (100cqi / var(--ar, 1) - 22px)/2), var(--bmax));
+  --bs: clamp(
+    12px,
+    min((100cqi - 2 * var(--bi, 6px) - 4 * var(--bg, 4px)) / 5, (100cqi / var(--ar, 1) - 22px)/2),
+    var(--bmax)
+  ); /* v2.1.1: up to 5 buttons in a row (a stack's top polaroid) */
 }
 /* v1.1.6: frameless photos (just the photo, with a shadow and a pin or two bits of tape) */
 .card.bare {
@@ -2706,7 +2714,7 @@ input.tab {
   bottom: var(--bi);
 }
 .cb.nxt {
-  left: calc(var(--bi) + var(--bs, 32px) + 4px);
+  left: calc(var(--bi) + var(--bs, 32px) + var(--bg, 4px));
   bottom: var(--bi);
 }
 .cb:disabled {
@@ -3445,18 +3453,18 @@ input.tab {
 }
 .cb.pflip {
   top: var(--bi);
-  left: calc(var(--bi) + var(--bs, 32px) + 4px);
+  left: calc(var(--bi) + var(--bs, 32px) + var(--bg, 4px));
 }
 .cb.pspread {
   top: var(--bi);
-  left: calc(var(--bi) + 2 * var(--bs, 32px) + 8px);
+  left: calc(var(--bi) + 2 * var(--bs, 32px) + 2 * var(--bg, 4px));
 }
 .card.idx .cb.lnk {
   left: var(--bi);
   bottom: var(--bi);
 }
 .cb.pmove {
-  left: calc(var(--bi) + var(--bs, 32px) + 4px);
+  left: calc(var(--bi) + var(--bs, 32px) + var(--bg, 4px));
   bottom: var(--bi);
   cursor: move;
   touch-action: none;
@@ -4583,16 +4591,16 @@ body.panning * {
 .note .cb.font {
   top: var(--bi);
   bottom: auto;
-  left: calc(var(--bi) + var(--bs, 32px) + 4px);
+  left: calc(var(--bi) + var(--bs, 32px) + var(--bg, 4px));
 }
 .card.idx .cb.font {
-  left: calc(var(--bi) + 2 * var(--bs, 32px) + 8px);
+  left: calc(var(--bi) + 2 * var(--bs, 32px) + 2 * var(--bg, 4px));
   bottom: var(--bi);
 } /* bottom row, so the top edge stays free to grab */
 /* tilt: a rotate handle on sticky notes, to-do lists and index cards (double-click straightens) */
 .note .cb.rot,
 .card.idx .cb.rot {
-  left: calc(var(--bi) + var(--bs, 32px) + 4px);
+  left: calc(var(--bi) + var(--bs, 32px) + var(--bg, 4px));
   bottom: var(--bi);
 }
 .card.rotg {
@@ -4673,10 +4681,10 @@ body.panning * {
   display: none;
 }
 .note .cb.pflip {
-  left: calc(var(--bi) + 2 * var(--bs, 32px) + 8px);
+  left: calc(var(--bi) + 2 * var(--bs, 32px) + 2 * var(--bg, 4px));
 }
 .note .cb.pspread {
-  left: calc(var(--bi) + 3 * var(--bs, 32px) + 12px);
+  left: calc(var(--bi) + 3 * var(--bs, 32px) + 3 * var(--bg, 4px));
 }
 .note .pcount {
   z-index: 3;
@@ -5118,26 +5126,26 @@ body.sbopen .sbtog {
 /* v2.0: stacks of polaroids and photobooth strips: their stack buttons sit after the card's own ones */
 .card:not(.note):not(.idx):not(.strip) .cb.pflip {
   top: var(--bi);
-  left: calc(var(--bi) + 2 * var(--bs, 32px) + 8px);
+  left: calc(var(--bi) + 2 * var(--bs, 32px) + 2 * var(--bg, 4px));
 }
 .card:not(.note):not(.idx):not(.strip) .cb.pspread {
   top: var(--bi);
-  left: calc(var(--bi) + 3 * var(--bs, 32px) + 12px);
+  left: calc(var(--bi) + 3 * var(--bs, 32px) + 3 * var(--bg, 4px));
 }
 .card:not(.note):not(.idx):not(.strip) .cb.pmove {
-  left: calc(var(--bi) + 2 * var(--bs, 32px) + 8px);
+  left: calc(var(--bi) + 2 * var(--bs, 32px) + 2 * var(--bg, 4px));
   bottom: var(--bi);
 }
 .strip .cb.pflip {
   top: var(--bi);
-  left: calc(var(--bi) + var(--bs, 32px) + 4px);
+  left: calc(var(--bi) + var(--bs, 32px) + var(--bg, 4px));
 }
 .strip .cb.pspread {
   top: var(--bi);
-  left: calc(var(--bi) + 2 * var(--bs, 32px) + 8px);
+  left: calc(var(--bi) + 2 * var(--bs, 32px) + 2 * var(--bg, 4px));
 }
 .strip .cb.pmove {
-  left: calc(var(--bi) + var(--bs, 32px) + 4px);
+  left: calc(var(--bi) + var(--bs, 32px) + var(--bg, 4px));
   bottom: var(--bi);
 }
 .card .pcount {
@@ -5163,7 +5171,7 @@ body.sbopen .sbtog {
   --bs: 24px;
 }
 .card.cal.cl-mini .calh {
-  padding: calc(11px * var(--sc, 1)) calc(var(--bs) + var(--bi) + 4px) calc(7px * var(--sc, 1));
+  padding: calc(11px * var(--sc, 1)) calc(var(--bs) + var(--bi) + var(--bg, 4px)) calc(7px * var(--sc, 1));
 }
 .card.cal.cl-mini .calm {
   font-size: calc(12.5px * var(--sc, 1));
@@ -5339,11 +5347,11 @@ body.sbopen .sbtog {
 /* v2.0: video play / pause and playback choices */
 .film .cb.vplay {
   top: var(--bi);
-  left: calc(var(--bi) + var(--bs, 32px) + 4px);
+  left: calc(var(--bi) + var(--bs, 32px) + var(--bg, 4px));
 }
 .film .cb.vopt {
   top: var(--bi);
-  left: calc(var(--bi) + 2 * var(--bs, 32px) + 8px);
+  left: calc(var(--bi) + 2 * var(--bs, 32px) + 2 * var(--bg, 4px));
 }
 .film .cb svg path {
   fill: none;
@@ -5371,17 +5379,17 @@ body.sbopen .sbtog {
 } /* v2.0: the arrows clear the card's buttons */
 /* v2.0.1: tilt handle on polaroids and photobooth strips (the stack's move grip uses the same spot, never at the same time) */
 .card:not(.note):not(.idx):not(.strip):not(.sticker) .cb.rot {
-  left: calc(var(--bi) + 2 * var(--bs, 32px) + 8px);
+  left: calc(var(--bi) + 2 * var(--bs, 32px) + 2 * var(--bg, 4px));
   bottom: var(--bi);
 }
 .strip .cb.rot {
-  left: calc(var(--bi) + var(--bs, 32px) + 4px);
+  left: calc(var(--bi) + var(--bs, 32px) + var(--bg, 4px));
   bottom: var(--bi);
 }
 
 /* v2.1: events from the Mac's Calendar app */
 .card.cal .cb.cmac {
-  left: calc(var(--bi) + var(--bs, 32px) + 4px);
+  left: calc(var(--bi) + var(--bs, 32px) + var(--bg, 4px));
   bottom: var(--bi);
 }
 .cald .cme {
@@ -5494,4 +5502,177 @@ body.sbopen .sbtog {
   border: 1px solid #d9cdbb;
   border-radius: 7px;
   padding: 3px 6px;
+}
+
+/* v2.1.1: no overlapping buttons. Below full size an item's buttons, their spacing and inset shrink with it, so a small
+   item is a scaled-down copy of a normal one (index cards already size theirs from their width). */
+.card {
+  --bk: min(1, var(--sc, 1));
+  --bi: calc(6px * var(--bk));
+  --bg: calc(4px * var(--bk));
+}
+.card:not(.idx),
+.card.note:not(.idx),
+.card.cal {
+  --bs: calc(var(--bmax) * var(--bk));
+}
+.card.cal.cl-mini {
+  --bs: calc(24px * var(--bk));
+}
+.card.cal .calh {
+  padding-left: calc(var(--bs, 32px) + var(--bi) + var(--bg, 4px) / 2);
+  padding-right: calc(var(--bs, 32px) + var(--bi) + var(--bg, 4px) / 2);
+}
+/* the month name gives way (…) before the arrows would slide under the buttons */
+.calm {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.calnav {
+  flex: none;
+}
+/* a stack's "3 cards" is a small badge just above the stack, clear of every button */
+.card .pcount,
+.note .pcount {
+  top: auto;
+  bottom: calc(100% + 4px);
+  right: 2px;
+  left: auto;
+  transform: none;
+}
+
+/* v2.1.1: calendar colours: a palette in the colour pop-up; header text follows the colour (--cci) */
+.calsw {
+  display: grid;
+  grid-template-columns: repeat(6, 26px);
+  gap: 6px;
+  padding: 2px 2px 8px;
+}
+.calsw button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+  transition: transform 0.12s;
+}
+.calsw button:hover {
+  transform: scale(1.1);
+}
+.calsw button.on {
+  box-shadow:
+    0 0 0 2px var(--frame, #fff),
+    0 0 0 4px var(--ink);
+}
+.calsw button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.card.cal .calh,
+.card.cal .calnav,
+.card.cal .cald.today {
+  color: var(--cci, #fff);
+}
+.card.cal .calnav {
+  background: color-mix(in srgb, var(--cci, #fff) 18%, transparent);
+}
+.card.cal .calnav:hover {
+  background: color-mix(in srgb, var(--cci, #fff) 32%, transparent);
+}
+.card.cal .calnav:focus-visible {
+  outline-color: var(--cci, #fff);
+}
+.card.cal .cald.today .cdot {
+  background: var(--cci, #fff);
+}
+
+/* v2.1.1: a cleaner settings panel: each group is one rounded panel of rows (label left, control right, a thin line
+   between rows, a short hint under the label) */
+#set .sgrp {
+  margin-top: 18px;
+  padding-top: 0;
+  border-top: 0;
+}
+#set .spane > .sgrp:first-child,
+#set #styleBox > .sgrp:first-child {
+  margin-top: 14px;
+}
+#set .sgrp h3 {
+  margin: 0 0 7px 4px;
+}
+#pn-general .sgrp > .trow,
+#pn-general .sgrp > .vrow {
+  margin: 0;
+  padding: 10px 14px;
+  min-height: 46px;
+  background: #f4ede2;
+}
+#pn-general .sgrp > h3 + * {
+  border-radius: 12px 12px 0 0;
+}
+#pn-general .sgrp > :last-child {
+  border-radius: 0 0 12px 12px;
+}
+#pn-general .sgrp > h3 + :last-child {
+  border-radius: 12px;
+}
+#pn-general .sgrp > * + .trow,
+#pn-general .sgrp > * + .vrow {
+  border-top: 1px solid #e6dccb;
+}
+#set .trow > span:first-child {
+  flex: 1;
+  min-width: 0;
+  padding-right: 14px;
+  line-height: 1.3;
+}
+#set .trow small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: #8a7c6a;
+  line-height: 1.35;
+}
+#set .vrow .vlab {
+  flex: none;
+  font-size: 15px;
+  min-width: 70px;
+}
+#set .ssel {
+  max-width: 62%;
+}
+#set #styleBox .stl {
+  margin: 4px 0 8px 4px;
+  font-size: 13.5px;
+  color: #5d5246;
+}
+#set #styleBox .stl ~ .stl {
+  margin-top: 14px;
+}
+
+/* v2.1.1: the pins-and-yarn button sits at the bottom right, just left of "+ Add" */
+.fab {
+  align-items: center;
+}
+.fab .yfab {
+  width: 48px;
+  height: 48px;
+  background: var(--soft);
+  color: var(--ink);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+.fab .yfab:hover {
+  background: #fff;
+}
+.fab .yfab.on {
+  background: var(--btn);
+  color: #fff8ec;
+}
+.fab .yfab svg {
+  width: 21px;
+  height: 21px;
 }

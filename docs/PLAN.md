@@ -1,5 +1,7 @@
 # Corkboard desktop: plan
 
+**Version 2.1.1:** no overlapping buttons on any item (buttons, spacing and inset shrink with items below full size; photos size theirs for the buttons actually in a row; a stack's count is a badge above it; calendar month names give way before the arrows would), checked by test 20 at 50%, 100% and 200%. Calendars: an 18-colour palette plus any custom colour (`c` is any hex now), with header text that stays readable on light colours. Settings grouped into panels with shorter labels. The pins-and-yarn button moved next to "+ Add". `npm test` runs 41 tests.
+
 **Version 2.1.0:** calendar cards link to the Mac's Calendar app (and so to Google or any account added to the Mac). A Swift helper (`native/calendar`, EventKit) reads events for the days shown, and day notes on a linked card become Calendar events: all-day, or an hour from an optional time, in a chosen calendar (`macTo`). Changing or removing a note changes or removes the event it made (`days[date].ev`); other events are never changed. macOS asks for access the first time. A diagnostic log (`logs/calendar.log` in the app's data folder) records each step without any note text. `npm test` runs 38 tests.
 
 **Clean-up:** the single-file web version (`corkboard v1.6.2.html`, `v1.6.3.html`) is no longer kept or tested: the app is the only version. Its round-trip test (11) and the feature inventory of the old file (`FEATURES.md`) went with it; all are still in git history.

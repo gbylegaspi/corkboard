@@ -45,7 +45,7 @@ xattr -dr com.apple.quarantine /Applications/Corkboard.app
   - Misspelled words are underlined; right-click one for suggestions. Turn it off in Settings → General → **Check spelling**.
   - The **rotate** handle tilts a note or card; double-click it to straighten.
   - Drag the **bottom edge** of a note or card to make it longer or shorter; double-click the edge to reset.
-- **Calendars:** the calendar button on a calendar picks its look: **Month**, **Wide month**, **Mini month**, **Week** or **Tear-off day**.
+- **Calendars:** the calendar button on a calendar picks its look: **Month**, **Wide month**, **Mini month**, **Week** or **Tear-off day**. The colour button offers 18 colours, or any colour with **Custom colour**.
   - **Your Calendar app's events:** the second button on a calendar card shows events from the Mac's Calendar app on it. The first time, macOS asks whether Corkboard may see your calendars. Pick which calendars to show; they update when you come back to the window.
   - **Notes go to Calendar too:** on a card that shows Calendar events, what you write on a day is added to the Calendar app as an event: all-day, or an hour long if you give it a time. Pick which calendar with **Add notes to**. Changing or removing the note changes or removes that event; events made in the Calendar app itself are never changed.
   - **Google Calendar:** add your Google account in **System Settings → Internet Accounts**, and its calendars appear in the Calendar app and on your board.
@@ -61,8 +61,8 @@ xattr -dr com.apple.quarantine /Applications/Corkboard.app
   - Drag a section onto another to put it inside, or between two to move it. The arrow next to a section hides or shows what's inside.
   - Double-click a name (or use ✎) to rename it. **×** deletes a section, together with everything inside it.
 - **Title:** the big title at the top is the name of the section you're in. Click it to rename the section.
-- **Toolbar:** Settings, pins and yarn, and zoom are at the top right.
-- **Holding things still:** Settings → General → turn off **Cards lift and straighten when you point at them** to place things precisely.
+- **Toolbar:** Settings and zoom are at the top right. The pins-and-yarn button is at the bottom right, next to **+ Add**.
+- **Holding things still:** Settings → General → turn off **Lift when pointed at** to place things precisely.
 - **Themes:** Settings → Theme → **Different theme for this section** gives the section you're looking at its own theme. Sections inside it use that theme too, unless they have their own.
 
 ## Updates
